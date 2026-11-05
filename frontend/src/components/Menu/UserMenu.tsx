@@ -1,10 +1,5 @@
 import { useState } from 'react';
-
-import { menuDividerSx, menuItemSx, railItemSx, revealSx } from './menuItemSx';
 import { useNavigate } from 'react-router-dom';
-
-import { useAuth } from '@/utils/hooks/useAuth';
-import { ROLE_LABELS } from '@/utils/types/roles';
 
 import {
   Avatar,
@@ -15,6 +10,11 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
+
+import { useAuth } from '@/utils/hooks/useAuth';
+import { ROLE_LABELS } from '@/utils/types/roles';
+
+import { menuDividerSx, menuItemSx, railItemSx, revealSx } from './menuItemSx';
 
 type UserMenuProps = {
   /** Полоса иконок: строка занимает 64px. */

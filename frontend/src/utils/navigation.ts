@@ -1,5 +1,3 @@
-import type { NavItem } from '@/utils/types/navigation';
-
 import BookmarkBorderOutlined from '@mui/icons-material/BookmarkBorderOutlined';
 import EditNoteOutlined from '@mui/icons-material/EditNoteOutlined';
 import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
@@ -7,6 +5,8 @@ import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import LibraryBooksOutlined from '@mui/icons-material/LibraryBooksOutlined';
 import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+
+import type { NavItem } from '@/utils/types/navigation';
 
 export const NAV_ITEMS: NavItem[] = [
   {

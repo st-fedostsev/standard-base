@@ -1,9 +1,5 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 
-import { RowKebab } from '@/components/RowKebab';
-
-import type { ActionItem } from '@/utils/types/actions';
-
 import {
   Box,
   Checkbox,
@@ -17,6 +13,10 @@ import {
   TableSortLabel,
   Typography,
 } from '@mui/material';
+
+import { RowKebab } from '@/components/RowKebab';
+
+import type { ActionItem } from '@/utils/types/actions';
 
 export type Column<T> = {
   key: string;

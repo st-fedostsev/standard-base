@@ -1,10 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
 
-import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
-import type { ActionItem } from '@/utils/types/actions';
-import { hasAccess } from '@/utils/types/roles';
-
-import MoreVert from '@mui/icons-material/MoreVert';
 import {
   Box,
   IconButton,
@@ -13,6 +8,11 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
+import MoreVert from '@mui/icons-material/MoreVert';
+
+import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
+import type { ActionItem } from '@/utils/types/actions';
+import { hasAccess } from '@/utils/types/roles';
 
 type RowKebabProps = {
   actions: ActionItem[];

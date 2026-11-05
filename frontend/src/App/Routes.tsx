@@ -1,10 +1,11 @@
-import { CardsPage } from '../pages/CardPage/CardsPage';
-import { ContentLayout } from './ContentLayout';
 import {
   Route,
   createBrowserRouter,
   createRoutesFromElements,
 } from 'react-router-dom';
+
+import { CardsPage } from '../pages/CardPage/CardsPage';
+import { ContentLayout } from './ContentLayout';
 
 export const router = createBrowserRouter(
   createRoutesFromElements(

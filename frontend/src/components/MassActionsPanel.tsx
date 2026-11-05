@@ -1,12 +1,5 @@
 import { useState } from 'react';
 
-import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
-import { type ActionItem } from '@/utils/types/actions';
-import { hasAccess } from '@/utils/types/roles';
-
-import CheckBoxOutlined from '@mui/icons-material/CheckBoxOutlined';
-import Close from '@mui/icons-material/Close';
-import MoreHoriz from '@mui/icons-material/MoreHoriz';
 import {
   Box,
   Button,
@@ -18,6 +11,13 @@ import {
   MenuItem,
   Typography,
 } from '@mui/material';
+import CheckBoxOutlined from '@mui/icons-material/CheckBoxOutlined';
+import Close from '@mui/icons-material/Close';
+import MoreHoriz from '@mui/icons-material/MoreHoriz';
+
+import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
+import { type ActionItem } from '@/utils/types/actions';
+import { hasAccess } from '@/utils/types/roles';
 
 export type MassAction = ActionItem;
 

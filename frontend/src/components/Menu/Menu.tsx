@@ -1,12 +1,5 @@
 import { useState, type ReactNode } from 'react';
-
-import { UserMenu } from './UserMenu';
-import { menuDividerSx, menuItemSx, railItemSx, revealSx } from './menuItemSx';
 import { NavLink, useLocation } from 'react-router-dom';
-
-import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
-import { isExternalItem, type NavItem } from '@/utils/types/navigation';
-import { hasAccess } from '@/utils/types/roles';
 
 import {
   Box,
@@ -21,6 +14,18 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+
+import { UserMenu } from '@/components/Menu/UserMenu';
+import {
+  menuDividerSx,
+  menuItemSx,
+  railItemSx,
+  revealSx,
+} from '@/components/Menu/menuItemSx';
+
+import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
+import { isExternalItem, type NavItem } from '@/utils/types/navigation';
+import { hasAccess } from '@/utils/types/roles';
 
 type MenuProps = {
   items: NavItem[];

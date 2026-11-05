@@ -1,7 +1,7 @@
 import type { ElementType, ReactNode } from 'react';
 
-import InboxOutlined from '@mui/icons-material/InboxOutlined';
 import { Box, Typography } from '@mui/material';
+import InboxOutlined from '@mui/icons-material/InboxOutlined';
 
 type EmptyStateProps = {
   /** Иконка сверху, компонент, например PersonAddAltOutlined. */

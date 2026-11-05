@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+
+import { Button, Chip } from '@mui/material/';
+import { DeleteForeverOutlined } from '@mui/icons-material/';
+import AddIcon from '@mui/icons-material/Add';
+import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
+import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 
 import { CellLines, DataTable, type Column } from '@/components/DataTable';
 import { EmptyState } from '@/components/EmptyState';
@@ -9,14 +16,8 @@ import { MassActionsPanel } from '@/components/MassActionsPanel';
 import { PageLayout } from '@/components/PageLayout';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { SearchInput } from '@/components/SearchInput';
-import { ROLES } from '@/utils/types/roles';
 
-import { DeleteForeverOutlined } from '@mui/icons-material/';
-import AddIcon from '@mui/icons-material/Add';
-import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
-import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
-import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
-import { Button, Chip } from '@mui/material/';
+import { ROLES } from '@/utils/types/roles';
 
 // Статусы из раздела модерации брифа. Набор предположение TODO подтвердить
 type CardStatus = 'draft' | 'review' | 'published' | 'returned' | 'archived';
