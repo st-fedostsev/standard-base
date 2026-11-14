@@ -2,24 +2,27 @@ import type { KeyboardEvent } from 'react';
 
 import { IconButton, InputAdornment, TextField } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
-import SearchIcon from '@mui/icons-material/Search';
+import SearchOutlined from '@mui/icons-material/SearchOutlined';
 
 type SearchInputProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  dataTid?: string;
+  /** По умолчанию фиксированные 360px. true растягивает поле на весь контейнер */
+  fullWidth?: boolean;
 };
+
+const DEFAULT_WIDTH = 360;
 
 export function SearchInput({
   value,
   onChange,
   placeholder = 'Поиск',
-  dataTid = 'search-input',
+  fullWidth = false,
 }: SearchInputProps) {
   const clear = () => onChange('');
 
-  // Escape очищает поле, как в строках поиска браузеров
+  // Escape очищает поле
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape' && value !== '') {
       e.preventDefault();
@@ -29,19 +32,21 @@ export function SearchInput({
 
   return (
     <TextField
-      data-tid={dataTid}
       size='small'
-      fullWidth
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}
+      sx={{ width: fullWidth ? '100%' : DEFAULT_WIDTH, maxWidth: '100%' }}
       slotProps={{
         htmlInput: { 'aria-label': placeholder },
         input: {
           startAdornment: (
             <InputAdornment position='start'>
-              <SearchIcon fontSize='small' sx={{ color: 'text.secondary' }} />
+              <SearchOutlined
+                fontSize='small'
+                sx={{ color: 'text.secondary' }}
+              />
             </InputAdornment>
           ),
           endAdornment:

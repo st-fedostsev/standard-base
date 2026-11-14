@@ -1,8 +1,8 @@
 // src/App/theme.ts
 import { createTheme } from '@mui/material/styles';
 
-const ACCENT = '#844bec'; // акцент из презентации
-const ACCENT_HOVER = '#7B55D9'; // подобран мной: в образце наведения нет
+const ACCENT = 'rgba(25, 118, 210, 1)'; // акцент из презентации
+const ACCENT_HOVER = 'rgba(25, 118, 210, 1)'; // подобран мной: в образце наведения нет
 
 export const theme = createTheme({
   palette: {

@@ -2,7 +2,14 @@ import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import {
   Box,
+  ButtonBase,
   Checkbox,
+  Divider,
+  ListItemIcon,
+  ListItemText,
+  ListSubheader,
+  Menu,
+  MenuItem,
   Skeleton,
   Table,
   TableBody,
@@ -10,33 +17,56 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TableSortLabel,
   Typography,
 } from '@mui/material';
+import ArrowDownward from '@mui/icons-material/ArrowDownward';
+import ArrowUpward from '@mui/icons-material/ArrowUpward';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import RestartAlt from '@mui/icons-material/RestartAlt';
 
+import { menuDividerSx, menuItemSx } from '@/components/Menu/menuItemSx';
 import { RowKebab } from '@/components/RowKebab';
 
 import type { ActionItem } from '@/utils/types/actions';
+
+export type SortDir = 'asc' | 'desc';
+
+/** Подписи пунктов меню сортировки */
+export type SortLabels = { asc: string; desc: string };
+
+/** Готовые наборы подписей. Свои задаются прямо в колонке */
+// eslint-disable-next-line react-refresh/only-export-components
+export const SORT_LABELS: Record<
+  'text' | 'dateNewFirst' | 'number',
+  SortLabels
+> = {
+  text: { asc: 'От А до Я', desc: 'От Я до А' },
+  dateNewFirst: { asc: 'Сначала старые', desc: 'Сначала новые' },
+  number: { asc: 'По возрастанию', desc: 'По убыванию' },
+};
+
+const DEFAULT_SORT_LABELS = SORT_LABELS.number;
 
 export type Column<T> = {
   key: string;
   title: string;
   render: (row: T) => ReactNode;
-  /** Значение для сортировки. Не задано: колонка не сортируется. */
+  /** Значение для сортировки. Не задано: колонка не сортируется */
   sortValue?: (row: T) => string | number;
-  align?: 'left' | 'center' | 'right';
+  /** Подписи пунктов сортировки. Не задано: "По возрастанию" и "По убыванию" */
+  sortLabels?: SortLabels;
   width?: number | string;
 };
 
-type SortState = { key: string; dir: 'asc' | 'desc' } | null;
+type SortState = { key: string; dir: SortDir } | null;
 
-/** Что таблица передаёт в панель массовых действий. */
+/** Что таблица передаёт в панель массовых действий */
 export type MassActionsContext = {
-  /** Сколько строк выбрано. */
+  /** Сколько строк выбрано */
   count: number;
-  /** Выбрать все видимые строки. */
+  /** Выбрать все видимые строки */
   selectAll: () => void;
-  /** Снять выбор. */
+  /** Снять выбор */
   clear: () => void;
 };
 
@@ -44,63 +74,199 @@ type DataTableProps<T> = {
   columns: Column<T>[];
   rows: T[];
   getRowId: (row: T) => string;
-  /**
-   * Выбранные id. Чекбоксы появляются, только если заданы selectedIds,
-   * onSelectedIdsChange и massActionsPanel.
-   */
+  /** Выбранные id. Чекбоксы появляются, только если заданы selectedIds, onSelectedIdsChange и massActionsPanel */
   selectedIds?: ReadonlySet<string>;
   onSelectedIdsChange?: (ids: Set<string>) => void;
-  /**
-   * Панель массовых действий. Выводится внизу, пока выбрана хотя бы одна
-   * строка.
-   */
+  /** Панель массовых действий. Выводится внизу, пока выбрана хотя бы одна строка */
   massActionsPanel?: (ctx: MassActionsContext) => ReactNode;
-  /**
-   * Меню справа в строке. Не задано: колонки нет. Пустой список для строки:
-   * кнопки нет.
-   */
+  /** Меню справа в строке. Не задано: колонки нет. Пустой список для строки: кнопки нет */
   kebabMenu?: (row: T) => ActionItem[];
   onRowClick?: (row: T) => void;
   isLoading?: boolean;
   errorText?: string;
-  /**
-   * Показывается вместо таблицы, когда строк нет и данные загружены (обычно
-   * EmptyState)
-   */
+  /** Показывается вместо таблицы, когда строк нет и данные загружены (обычно EmptyState) */
   empty?: ReactNode;
-  /** Префикс data-tid. На tbody ставится состояние: -loading, -error или -data. */
-  dataTid?: string;
 };
 
 const SKELETON_ROWS = 5;
-/** Запас под фиксированную панель, чтобы она не закрывала последнюю строку. */
+/** Запас под фиксированную панель, чтобы она не закрывала последнюю строку */
 const PANEL_SPACER_PX = 96;
 const KEBAB_COLUMN_WIDTH = 56;
+const BODY_CELL_SX = { py: 1.5, verticalAlign: 'middle' } as const;
 
 function compareValues(a: string | number, b: string | number): number {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
   return String(a).localeCompare(String(b), 'ru');
 }
 
-/** Двухстрочная ячейка: основной текст и пояснение под ним. */
+/** Основной текст и пояснение под ним. Длинный текст обрезается, полный виден в подсказке */
 export function CellLines({
   primary,
   secondary,
 }: {
   primary: ReactNode;
-  secondary?: ReactNode;
+  secondary?: string;
 }) {
   return (
-    <>
-      <Typography variant='body2'>{primary}</Typography>
+    <Box sx={{ minWidth: 0, maxWidth: 320 }}>
+      <Typography
+        variant='body2'
+        noWrap
+        title={typeof primary === 'string' ? primary : undefined}
+      >
+        {primary}
+      </Typography>
       {secondary && (
         <Typography
           variant='caption'
-          sx={{ color: 'text.secondary', display: 'block' }}
+          noWrap
+          title={secondary}
+          sx={{ display: 'block', color: 'text.secondary' }}
         >
           {secondary}
         </Typography>
       )}
+    </Box>
+  );
+}
+
+type ColumnHeaderProps = {
+  title: string;
+  /** Не задано: колонка не сортируется, заголовок выводится текстом */
+  sortLabels?: SortLabels;
+  current: SortDir | null;
+  onSort: (dir: SortDir | null) => void;
+};
+
+/**
+ * Заголовок колонки. Сортируемый открывает меню «Сортировка».
+ * Отступ -4px компенсирует внутренний padding кнопки, поэтому текст стоит на одной линии с ячейками.
+ */
+function ColumnHeader({
+  title,
+  sortLabels,
+  current,
+  onSort,
+}: ColumnHeaderProps) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const open = Boolean(anchor);
+  const close = () => setAnchor(null);
+
+  const textSx = {
+    px: 0.5,
+    mx: -0.5,
+    py: 0.5,
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+  } as const;
+
+  if (!sortLabels) {
+    return (
+      <Typography variant='body2' sx={{ ...textSx, color: 'text.secondary' }}>
+        {title}
+      </Typography>
+    );
+  }
+
+  const pick = (dir: SortDir | null) => {
+    close();
+    onSort(dir);
+  };
+
+  return (
+    <>
+      <ButtonBase
+        aria-haspopup='menu'
+        aria-expanded={open}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{
+          ...textSx,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5,
+          borderRadius: 1,
+          color: current || open ? 'text.primary' : 'text.secondary',
+          transition: 'background-color 120ms ease, color 120ms ease',
+          '&:hover': { bgcolor: 'grey.100', color: 'text.primary' },
+          '&.Mui-focusVisible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 1,
+          },
+        }}
+      >
+        <Typography component='span' variant='body2' sx={{ fontWeight: 600 }}>
+          {title}
+        </Typography>
+        <KeyboardArrowDown
+          fontSize='small'
+          sx={{
+            transition: 'transform 150ms ease',
+            transform: open ? 'rotate(180deg)' : 'none',
+            opacity: current || open ? 1 : 0.5,
+          }}
+        />
+      </ButtonBase>
+
+      <Menu
+        anchorEl={anchor}
+        open={open}
+        onClose={close}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: { sx: { minWidth: 220, borderRadius: 2, mt: 0.5 } },
+          list: { sx: { px: 1, py: 1 } },
+        }}
+      >
+        <ListSubheader
+          disableSticky
+          sx={{
+            lineHeight: '32px',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'text.secondary',
+            px: 2,
+          }}
+        >
+          Сортировка
+        </ListSubheader>
+
+        <MenuItem
+          selected={current === 'asc'}
+          sx={menuItemSx}
+          onClick={() => pick('asc')}
+        >
+          <ListItemIcon>
+            <ArrowUpward fontSize='small' />
+          </ListItemIcon>
+          <ListItemText primary={sortLabels.asc} />
+        </MenuItem>
+
+        <MenuItem
+          selected={current === 'desc'}
+          sx={menuItemSx}
+          onClick={() => pick('desc')}
+        >
+          <ListItemIcon>
+            <ArrowDownward fontSize='small' />
+          </ListItemIcon>
+          <ListItemText primary={sortLabels.desc} />
+        </MenuItem>
+
+        <Divider sx={menuDividerSx} />
+
+        <MenuItem
+          disabled={current === null}
+          sx={menuItemSx}
+          onClick={() => pick(null)}
+        >
+          <ListItemIcon>
+            <RestartAlt fontSize='small' />
+          </ListItemIcon>
+          <ListItemText primary='Сбросить' />
+        </MenuItem>
+      </Menu>
     </>
   );
 }
@@ -117,7 +283,6 @@ export function DataTable<T>({
   isLoading = false,
   errorText,
   empty,
-  dataTid = 'data-table',
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<SortState>(null);
 
@@ -137,7 +302,7 @@ export function DataTable<T>({
         : 'data';
 
   const sortedRows = useMemo(() => {
-    const column = columns.find((c) => c.key === sort?.key);
+    const column = columns.find((c) => sort && c.key === sort.key);
     const getValue = column?.sortValue;
     if (!sort || !getValue) return rows;
     const factor = sort.dir === 'asc' ? 1 : -1;
@@ -145,14 +310,6 @@ export function DataTable<T>({
       (a, b) => compareValues(getValue(a), getValue(b)) * factor
     );
   }, [rows, columns, sort]);
-
-  // Клик по заголовку: по возрастанию, затем по убыванию
-  const toggleSort = (key: string) =>
-    setSort((prev) =>
-      prev?.key === key
-        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-        : { key, dir: 'asc' }
-    );
 
   // Чекбокс в шапке работает с видимыми строками
   const visibleIds = rows.map(getRowId);
@@ -213,44 +370,43 @@ export function DataTable<T>({
                   />
                 </TableCell>
               )}
+
               {columns.map((column) => {
-                const current = sort?.key === column.key ? sort : null;
+                const activeDir =
+                  sort && sort.key === column.key ? sort.dir : null;
                 return (
                   <TableCell
                     key={column.key}
-                    align={column.align}
-                    sortDirection={current ? current.dir : false}
-                    sx={{
-                      width: column.width,
-                      color: 'text.secondary',
-                      fontWeight: 600,
-                    }}
+                    sortDirection={activeDir ?? false}
+                    sx={{ width: column.width, verticalAlign: 'middle' }}
                   >
-                    {column.sortValue ? (
-                      <TableSortLabel
-                        active={current !== null}
-                        direction={current?.dir ?? 'asc'}
-                        onClick={() => toggleSort(column.key)}
-                      >
-                        {column.title}
-                      </TableSortLabel>
-                    ) : (
-                      column.title
-                    )}
+                    <ColumnHeader
+                      title={column.title}
+                      sortLabels={
+                        column.sortValue
+                          ? (column.sortLabels ?? DEFAULT_SORT_LABELS)
+                          : undefined
+                      }
+                      current={activeDir}
+                      onSort={(dir) =>
+                        setSort(dir ? { key: column.key, dir } : null)
+                      }
+                    />
                   </TableCell>
                 );
               })}
+
               {kebabMenu && <TableCell sx={{ width: KEBAB_COLUMN_WIDTH }} />}
             </TableRow>
           </TableHead>
 
-          <TableBody data-tid={`${dataTid}-${state}`}>
+          <TableBody>
             {state === 'loading' &&
               Array.from({ length: SKELETON_ROWS }, (_, i) => (
                 <TableRow key={i}>
                   {selectable && <TableCell padding='checkbox' />}
                   {columns.map((column) => (
-                    <TableCell key={column.key}>
+                    <TableCell key={column.key} sx={BODY_CELL_SX}>
                       <Skeleton variant='text' />
                     </TableCell>
                   ))}
@@ -297,6 +453,7 @@ export function DataTable<T>({
                       // Клик по чекбоксу не срабатывает как клик по строке
                       <TableCell
                         padding='checkbox'
+                        sx={{ verticalAlign: 'middle' }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -308,11 +465,13 @@ export function DataTable<T>({
                         />
                       </TableCell>
                     )}
+
                     {columns.map((column) => (
-                      <TableCell key={column.key} align={column.align}>
+                      <TableCell key={column.key} sx={BODY_CELL_SX}>
                         {column.render(row)}
                       </TableCell>
                     ))}
+
                     {kebabMenu && (
                       <TableCell
                         align='right'

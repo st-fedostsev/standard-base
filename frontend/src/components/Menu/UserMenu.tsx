@@ -26,7 +26,7 @@ type UserMenuProps = {
 };
 
 export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const isOpen = Boolean(anchor);
@@ -58,7 +58,7 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
           onClick={async () => {
             close();
             try {
-              await logout();
+              // TODO добавить
             } catch {
               // На клиенте пользователь уже гость, AuthProvider сбросил его в finally
             }
@@ -93,7 +93,7 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
         <ListItemIcon>
           {/* Без src и children MUI рисует иконку по умолчанию */}
           <Avatar
-            src={user?.avatarUrl}
+            src={user?.avatarUrl || undefined}
             alt=''
             sx={{ width: 24, height: 24, fontSize: 12 }}
           >

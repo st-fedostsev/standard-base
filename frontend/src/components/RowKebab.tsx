@@ -8,7 +8,7 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
-import MoreVert from '@mui/icons-material/MoreVert';
+import MoreHoriz from '@mui/icons-material/MoreHoriz';
 
 import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
 import type { ActionItem } from '@/utils/types/actions';
@@ -20,8 +20,9 @@ type RowKebabProps = {
 };
 
 /**
- * Кнопка «⋮» в строке таблицы. Не выводится, если по роли не видно ни одного
- * пункта. Клики внутри не доходят до строки, иначе открылась бы карточка.
+ * Кнопка «⋯» в строке таблицы. Видна при наведении на строку, при фокусе внутри строки
+ * и пока открыто меню. Без наведения (телефон, планшет) видна всегда.
+ * Селекторы ищут родителя .MuiTableRow-root, поэтому компонент рассчитан на MUI TableRow.
  */
 export function RowKebab({
   actions,
@@ -38,14 +39,27 @@ export function RowKebab({
   const close = () => setAnchor(null);
 
   return (
-    <Box onClick={stop} onKeyDown={stop} sx={{ display: 'inline-flex' }}>
+    <Box
+      onClick={stop}
+      onKeyDown={stop}
+      sx={{
+        display: 'inline-flex',
+        // Пока меню открыто, кнопка остаётся видимой, даже если курсор ушёл на затемнение
+        opacity: anchor ? 1 : 0,
+        transition: 'opacity 120ms ease',
+        '.MuiTableRow-root:hover &, .MuiTableRow-root:focus-within &': {
+          opacity: 1,
+        },
+        '@media (hover: none)': { opacity: 1 },
+      }}
+    >
       <IconButton
         aria-label={label}
         aria-haspopup='menu'
         aria-expanded={Boolean(anchor)}
         onClick={(e) => setAnchor(e.currentTarget)}
       >
-        <MoreVert fontSize='small' />
+        <MoreHoriz fontSize='small' />
       </IconButton>
 
       <Menu

@@ -113,16 +113,74 @@ export function Menu({ items, footerItems = [], title, children }: MenuProps) {
     };
 
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          width: FULL_WIDTH,
+          minWidth: FULL_WIDTH,
+          height: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
         {title && (
           <>
-            <Typography
-              variant='h6'
-              noWrap
-              sx={{ px: 3, py: 2, ...revealSx(showLabels) }}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                minHeight: 72,
+                overflow: 'hidden',
+              }}
             >
-              {title}
-            </Typography>
+              {/* Логотип остаётся на месте при раскрытии панели */}
+              <Box
+                aria-hidden='true'
+                sx={{
+                  width: RAIL_WIDTH,
+                  flexShrink: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 2,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    fontSize: 22,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                  }}
+                >
+                  Б
+                </Box>
+              </Box>
+
+              {/* Название появляется при раскрытии панели */}
+              <Typography
+                variant='subtitle2'
+                sx={{
+                  minWidth: 0,
+                  pr: 1,
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  opacity: showLabels ? 1 : 0,
+                  transition: showLabels
+                    ? 'opacity 200ms ease 80ms'
+                    : 'opacity 100ms ease',
+                }}
+              >
+                {title}
+              </Typography>
+            </Box>
+
             <Divider sx={menuDividerSx} variant='middle' />
           </>
         )}
