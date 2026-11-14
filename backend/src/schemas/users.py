@@ -34,3 +34,7 @@ class UserData(BaseModel):
 
 class ReadNotificationData(BaseModel):
     id: uuid.UUID
+
+class NotificationsGetData(BaseModel):
+    limit: int
+    offset: int

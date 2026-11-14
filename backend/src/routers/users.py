@@ -179,16 +179,24 @@ async def me(response: Response, session: Session = Depends(get_session), creden
 
     return UserData(**dict(user))
 
-@router.get(
+@router.post(
     '/notifications',
     summary='Получить уведомления'
 )
-async def notifications(response: Response, session: Session = Depends(get_session), credentials: JwtAuthorizationCredentials = Security(access_security)):
+async def notifications(
+    response: Response, 
+    notifications_get_data: NotificationsGetData, 
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security)
+):
     if not credentials:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return Message(msg='Не передан JWT токен или JWT токен неверный')
     user_id = uuid.UUID(credentials['id'])
-    q = select(Notification).where(Notification.user_id == user_id)
+    q = (select(Notification)
+        .where(Notification.user_id == user_id)
+        .offset(notifications_get_data.offset)
+        .limit(notifications_get_data.limit))
     result = session.exec(q).all()
     if result is None:
         return []
