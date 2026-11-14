@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, Security, Response, status, Cookie
 from sqlmodel import Session, select
 from database.session import get_session
-from models import User, AuthCode, AUTH_CODE_VALID_FOR
+from models import User, AuthCode, AUTH_CODE_VALID_FOR, Notification
 from pwdlib import PasswordHash
 from notifiers.email_notifier import EmailNotifier, get_email_notifier
 from schemas.users import *
@@ -178,3 +178,48 @@ async def me(response: Response, session: Session = Depends(get_session), creden
         return Message(msg='Пользователь не найден')
 
     return UserData(**dict(user))
+
+@router.get(
+    '/notifications',
+    summary='Получить уведомления'
+)
+async def notifications(response: Response, session: Session = Depends(get_session), credentials: JwtAuthorizationCredentials = Security(access_security)):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    user_id = uuid.UUID(credentials['id'])
+    q = select(Notification).where(Notification.user_id == user_id)
+    result = session.exec(q).all()
+    if result is None:
+        return []
+
+    return list(map(dict, result))
+
+@router.post(
+    '/read_notification',
+    summary='Прочитать уведомление'
+)
+async def read_notification(
+    response: Response, 
+    read_notification_data: ReadNotificationData, 
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security)
+):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    
+    user_id = uuid.UUID(credentials['id'])
+    q = (select(Notification)
+        .where(Notification.id == read_notification_data.id)
+        .where(Notification.user_id == user_id))
+    notification = session.exec(q).first()
+    if notification is None:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return Message(msg='Уведомление не найдено')
+    
+    notification.read = True
+    session.add(notification)
+    session.commit()
+
+    return Message(msg='Уведомление прочитано')

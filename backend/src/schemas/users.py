@@ -31,3 +31,6 @@ class UserData(BaseModel):
     patronymic: Optional[str] = None
     email: str
     role: str
+
+class ReadNotificationData(BaseModel):
+    id: uuid.UUID

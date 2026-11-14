@@ -1,6 +1,7 @@
 from .user import User, UserRole, AuthCode, AUTH_CODE_VALID_FOR
 from .guid import GUID
 from .card import Card, CardCategory, CardStatus, CardVisibility
+from .notification import Notification
 
 __all__ = [
     'User',
@@ -10,5 +11,6 @@ __all__ = [
     'GUID',
     'CardCategory',
     'CardStatus',
-    'CardVisibility'
+    'CardVisibility',
+    'Notification',
 ]

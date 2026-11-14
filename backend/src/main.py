@@ -48,6 +48,12 @@ async def populate_defaults():
             )
             session.add(user)
             session.commit()
+            await Notification.create_notification(
+                session, 
+                user.id, 
+                'Добро пожаловать',
+                'Вы являетесь администратором системы',
+            )
 
 @app.on_event('startup')
 async def on_startup():
