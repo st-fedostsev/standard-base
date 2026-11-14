@@ -1,5 +1,4 @@
-from sqlmodel import Field, Session, SQLModel, Relationship, Column, Enum, JSON
-from sqlalchemy import BigInteger
+from sqlmodel import Field, Session, SQLModel, Relationship, Column, Enum, JSON, LargeBinary
 import uuid
 import enum
 from .guid import GUID
@@ -16,11 +15,12 @@ class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, sa_column=Column(GUID, primary_key=True))
     first_name: str = Field()
     last_name: str = Field()
-    patronymic: str | None = None
+    patronymic: str = Field(nullable=True)
     email: str = Field(unique=True)
     password_hash: str = Field(nullable=True)
     role: UserRole = Field(default=UserRole.guest, sa_column=Column(Enum(UserRole)))
     email_verified: bool = Field(default=False)
+    avatar: bytes = Field(sa_column=Column(LargeBinary, nullable=True))
 
 AUTH_CODE_VALID_FOR = 5 # minutes
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, Security, Response, status, Cookie
+from fastapi import APIRouter, Request, Depends, Security, Response, status, Cookie, UploadFile
 from sqlmodel import Session, select
 from database.session import get_session
 from models import User, AuthCode, AuthCodeType, AUTH_CODE_VALID_FOR, Notification
@@ -14,6 +14,7 @@ import uuid
 import pyotp
 import asyncio
 from datetime import datetime, timezone
+import base64
 
 
 router = APIRouter(
@@ -228,6 +229,33 @@ async def change_password(
     return CodeIdData(code_id=code.id)
 
 @router.post(
+    '/change_avatar',
+    summary='Изменить аватар'
+)
+async def change_password(
+    response: Response, 
+    avatar: UploadFile,
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security)
+):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    
+    user_id = uuid.UUID(credentials['id'])
+    q = select(User).where(User.id == user_id)
+    user = session.exec(q).first()
+    if user is None:
+        return Message(msg='Пользователь не найден')
+
+    avatar_data = await avatar.read()
+    user.avatar = avatar_data
+    session.add(user)
+    session.commit()
+
+    return Message(msg='Данные сохранены')
+
+@router.post(
     '/refresh',
     summary='Обновления JWT токена'
 )
@@ -284,7 +312,9 @@ async def me(response: Response, session: Session = Depends(get_session), creden
     if user is None:
         return Message(msg='Пользователь не найден')
 
-    return UserData(**dict(user))
+    user_tmp = dict(user)
+    user_tmp['avatar'] = base64.b64encode(user_tmp['avatar']).decode() if user_tmp['avatar'] is not None else None
+    return UserData(**user_tmp) 
 
 @router.post(
     '/notifications',
