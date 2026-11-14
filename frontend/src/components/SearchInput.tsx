@@ -8,7 +8,7 @@ type SearchInputProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  /** По умолчанию фиксированные 360px. true растягивает поле на весь контейнер */
+  /** По умолчанию фиксированные 360px. true растягивает поле на весь контейнер. */
   fullWidth?: boolean;
 };
 

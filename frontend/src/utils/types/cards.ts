@@ -1,6 +1,6 @@
 import type { DateRangeValue, FilterOption } from '@/utils/types/filters';
 
-/** Статусы карточки. Набор из раздела модерации брифа, подтвердить на созвоне */
+/** Статусы карточки. Набор из раздела модерации брифа, подтвердить на созвоне. */
 export const CARD_STATUS_LABELS = {
   draft: 'Черновик',
   review: 'На согласовании',
@@ -11,7 +11,7 @@ export const CARD_STATUS_LABELS = {
 
 export type CardStatus = keyof typeof CARD_STATUS_LABELS;
 
-/** Категории. Список — моё предположение, справочник пока не согласован */
+/** Категории. Список — моё предположение, справочник пока не согласован. */
 export const CARD_CATEGORIES = [
   'Процессы',
   'Инструменты',
@@ -44,17 +44,17 @@ export type CardRow = {
   category: CardCategory;
   author: CardAuthor;
   status: CardStatus;
-  /** Локальное время: YYYY-MM-DDTHH:mm:ss */
+  /** Локальное время: YYYY-MM-DDTHH:mm:ss. */
   updatedAt: string;
 };
 
 export type CardFilters = {
   search: string;
-  /** Пусто: все статусы */
+  /** Пусто: все статусы. */
   status: string[];
-  /** "all": все категории */
+  /** "all": все категории. */
   category: string;
-  /** "all": все авторы */
+  /** "all": все авторы. */
   authorId: string;
   updated: DateRangeValue;
 };

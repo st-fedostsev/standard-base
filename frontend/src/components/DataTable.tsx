@@ -31,10 +31,10 @@ import type { ActionItem } from '@/utils/types/actions';
 
 export type SortDir = 'asc' | 'desc';
 
-/** Подписи пунктов меню сортировки */
+/** Подписи пунктов меню сортировки. */
 export type SortLabels = { asc: string; desc: string };
 
-/** Готовые наборы подписей. Свои задаются прямо в колонке */
+/** Готовые наборы подписей. Свои задаются прямо в колонке. */
 // eslint-disable-next-line react-refresh/only-export-components
 export const SORT_LABELS: Record<
   'text' | 'dateNewFirst' | 'number',
@@ -51,7 +51,7 @@ export type Column<T> = {
   key: string;
   title: string;
   render: (row: T) => ReactNode;
-  /** Значение для сортировки. Не задано: колонка не сортируется */
+  /** Значение для сортировки. Не задано: колонка не сортируется. */
   sortValue?: (row: T) => string | number;
   /** Подписи пунктов сортировки. Не задано: "По возрастанию" и "По убыванию" */
   sortLabels?: SortLabels;
@@ -60,13 +60,13 @@ export type Column<T> = {
 
 type SortState = { key: string; dir: SortDir } | null;
 
-/** Что таблица передаёт в панель массовых действий */
+/** Что таблица передаёт в панель массовых действий. */
 export type MassActionsContext = {
-  /** Сколько строк выбрано */
+  /** Сколько строк выбрано. */
   count: number;
-  /** Выбрать все видимые строки */
+  /** Выбрать все видимые строки. */
   selectAll: () => void;
-  /** Снять выбор */
+  /** Снять выбор. */
   clear: () => void;
 };
 
@@ -74,22 +74,34 @@ type DataTableProps<T> = {
   columns: Column<T>[];
   rows: T[];
   getRowId: (row: T) => string;
-  /** Выбранные id. Чекбоксы появляются, только если заданы selectedIds, onSelectedIdsChange и massActionsPanel */
+  /**
+   * Выбранные id. Чекбоксы появляются, только если заданы selectedIds,
+   * onSelectedIdsChange и massActionsPanel.
+   */
   selectedIds?: ReadonlySet<string>;
   onSelectedIdsChange?: (ids: Set<string>) => void;
-  /** Панель массовых действий. Выводится внизу, пока выбрана хотя бы одна строка */
+  /**
+   * Панель массовых действий. Выводится внизу, пока выбрана хотя бы одна
+   * строка.
+   */
   massActionsPanel?: (ctx: MassActionsContext) => ReactNode;
-  /** Меню справа в строке. Не задано: колонки нет. Пустой список для строки: кнопки нет */
+  /**
+   * Меню справа в строке. Не задано: колонки нет. Пустой список для строки:
+   * кнопки нет.
+   */
   kebabMenu?: (row: T) => ActionItem[];
   onRowClick?: (row: T) => void;
   isLoading?: boolean;
   errorText?: string;
-  /** Показывается вместо таблицы, когда строк нет и данные загружены (обычно EmptyState) */
+  /**
+   * Показывается вместо таблицы, когда строк нет и данные загружены (обычно
+   * EmptyState)
+   */
   empty?: ReactNode;
 };
 
 const SKELETON_ROWS = 5;
-/** Запас под фиксированную панель, чтобы она не закрывала последнюю строку */
+/** Запас под фиксированную панель, чтобы она не закрывала последнюю строку. */
 const PANEL_SPACER_PX = 96;
 const KEBAB_COLUMN_WIDTH = 56;
 const BODY_CELL_SX = { py: 1.5, verticalAlign: 'middle' } as const;
@@ -99,7 +111,10 @@ function compareValues(a: string | number, b: string | number): number {
   return String(a).localeCompare(String(b), 'ru');
 }
 
-/** Основной текст и пояснение под ним. Длинный текст обрезается, полный виден в подсказке */
+/**
+ * Основной текст и пояснение под ним. Длинный текст обрезается, полный виден в
+ * подсказке.
+ */
 export function CellLines({
   primary,
   secondary,
@@ -132,15 +147,16 @@ export function CellLines({
 
 type ColumnHeaderProps = {
   title: string;
-  /** Не задано: колонка не сортируется, заголовок выводится текстом */
+  /** Не задано: колонка не сортируется, заголовок выводится текстом. */
   sortLabels?: SortLabels;
   current: SortDir | null;
   onSort: (dir: SortDir | null) => void;
 };
 
 /**
- * Заголовок колонки. Сортируемый открывает меню «Сортировка».
- * Отступ -4px компенсирует внутренний padding кнопки, поэтому текст стоит на одной линии с ячейками.
+ * Заголовок колонки. Сортируемый открывает меню «Сортировка». Отступ -4px
+ * компенсирует внутренний padding кнопки, поэтому текст стоит на одной линии с
+ * ячейками.
  */
 function ColumnHeader({
   title,

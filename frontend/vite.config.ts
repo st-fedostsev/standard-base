@@ -9,11 +9,6 @@ export default defineConfig(({ mode }) => {
   const host = env.HOST || 'localhost';
   const port = 5173;
 
-  // Прокси /api включается, только если в .env.local задан API_PROXY_TARGET
-  const proxy = env.API_PROXY_TARGET
-    ? { '/api': { target: env.API_PROXY_TARGET, changeOrigin: true } }
-    : undefined;
-
   return {
     plugins: [react()],
     resolve: {
@@ -25,7 +20,15 @@ export default defineConfig(({ mode }) => {
       host,
       port,
       open: process.env.CI ? false : `http://${host}:${port}/`,
-      proxy,
+      proxy: {
+        '/api': {
+          rewrite: (path) => path.replace(/^\/api(?=\/|$)/, '') || '/',
+          target: `http://${host}:8000/`,
+          changeOrigin: true,
+          prependPath: false,
+          secure: false,
+        },
+      },
     },
   };
 });

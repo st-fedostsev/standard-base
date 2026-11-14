@@ -27,12 +27,12 @@ import {
 
 type DatePickerFieldProps = {
   label: string;
-  /** YYYY-MM-DD, пусто: не задано */
+  /** YYYY-MM-DD, пусто: не задано. */
   value: string;
   onChange: (value: string) => void;
-  /** Самая ранняя доступная дата в календаре, YYYY-MM-DD */
+  /** Самая ранняя доступная дата в календаре, YYYY-MM-DD. */
   min?: string;
-  /** Самая поздняя доступная дата в календаре, YYYY-MM-DD */
+  /** Самая поздняя доступная дата в календаре, YYYY-MM-DD. */
   max?: string;
   error?: boolean;
   width?: number;

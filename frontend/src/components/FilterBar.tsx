@@ -17,10 +17,10 @@ import {
 } from '@/utils/types/filters';
 
 type FilterBarProps<T extends FilterValues> = {
-  /** Описание фильтров в порядке вывода */
+  /** Описание фильтров в порядке вывода. */
   defs: FilterDef[];
   value: T;
-  /** «Сбросить» возвращает эти значения. Кнопка видна, пока value отличается */
+  /** «Сбросить» возвращает эти значения. Кнопка видна, пока value отличается. */
   defaults: T;
   onChange: (next: T) => void;
   dataTid?: string;
@@ -29,8 +29,8 @@ type FilterBarProps<T extends FilterValues> = {
 const DEFAULT_SELECT_WIDTH = 200;
 
 /**
- * Общая панель фильтров. Поля выводятся по описанию defs.
- * Фильтр с roles скрыт для остальных ролей. Это только интерфейс: данные защищает backend.
+ * Общая панель фильтров. Поля выводятся по описанию defs. Фильтр с roles скрыт
+ * для остальных ролей. Это только интерфейс: данные защищает backend.
  */
 export function FilterBar<T extends FilterValues>({
   defs,

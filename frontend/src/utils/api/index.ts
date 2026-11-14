@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios';
 
-import { AuthApi } from '@/utils/api/auth';
+import { AuthApi } from '@/utils/api/authApi';
 import { createHttpClient } from '@/utils/api/client';
 
 export { ApiError, type ErrorBody } from '@/utils/api/errors';

@@ -149,7 +149,10 @@ const columns: Column<CardRow>[] = [
 const canSendToReview = (card: CardRow) =>
   card.status === 'draft' || card.status === 'returned';
 
-/** Фильтрация на клиенте. Только для заглушки: с backend фильтры уходят в запрос */
+/**
+ * Фильтрация на клиенте. Только для заглушки: с backend фильтры уходят в
+ * запрос.
+ */
 function filterCards(cards: CardRow[], f: CardFilters): CardRow[] {
   const q = f.search.trim().toLowerCase();
   const { from, to } = f.updated;
