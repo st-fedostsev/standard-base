@@ -1,0 +1,12 @@
+aiohttp==3.14.5
+fastapi[standard]==0.162.6
+fastapi_jwt==0.3.0
+pwdlib[argon2]==0.3.1
+pydantic==2.14.3
+pyotp==2.10.0
+python-decouple==3.8
+SQLAlchemy==2.1.8
+sqlmodel==0.0.50
+starlette==1.10.0
+authlib==1.9.5
+aiosmtplib==5.1.3
