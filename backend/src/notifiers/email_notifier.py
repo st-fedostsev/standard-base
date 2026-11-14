@@ -11,6 +11,7 @@ SMTP_SERVER = config('smtp_server')
 SMTP_PORT = int(config('smtp_port'))
 SMTP_EMAIL = config('smtp_email')
 SMTP_PASSWORD = config('smtp_password')
+ENVIRONMENT = config('environment')
 
 BASE_DIR = Path(__file__).parent.resolve()
 TEMPLATE = (BASE_DIR / 'templates' / 'mail.html').read_text(encoding='utf-8')
@@ -56,7 +57,10 @@ class MockNotifier(BaseNotifier):
     async def notify_code(self, dst: Any, subject: str, code: str, ttl_minutes: str) -> Any:
         print(f'Notification: {dst} {subject} {code} {ttl_minutes}')
 
-#EMAIL_NOTIFIER = EmailNotifier()
-EMAIL_NOTIFIER = MockNotifier()
+EMAIL_NOTIFIER = None
+if ENVIRONMENT == 'DEV':
+    EMAIL_NOTIFIER = MockNotifier()
+elif ENVIRONMENT == 'RELEASE':
+    EMAIL_NOTIFIER = EmailNotifier()
 def get_email_notifier():
     return EMAIL_NOTIFIER

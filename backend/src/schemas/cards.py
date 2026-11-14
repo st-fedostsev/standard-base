@@ -21,7 +21,7 @@ class CardCreateData(BaseModel):
     event: str
     category_id: uuid.UUID
     status: CardStatus
-    visbility: CardVisibility
+    visibility: CardVisibility
 
 class CardGetData(BaseModel):
     created_from: Optional[datetime.datetime]

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, Security, Response, status, Cookie, UploadFile
 from sqlmodel import Session, select
 from database.session import get_session
-from models import User, AuthCode, AuthCodeType, AUTH_CODE_VALID_FOR, Notification
+from models import User, AuthCode, AuthCodeType, AUTH_CODE_VALID_FOR, AUTH_CODE_MAX_TRIES, Notification
 from pwdlib import PasswordHash
 from notifiers.email_notifier import EmailNotifier, get_email_notifier
 from schemas.users import *
@@ -13,7 +13,7 @@ from decouple import config
 import uuid
 import pyotp
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import base64
 
 
@@ -62,16 +62,11 @@ async def register_user(
         email=register_data.email,
         password_hash=pwd_context.hash(register_data.password)
     )
-    hotp_key = pyotp.random_base32()
-    hotp = pyotp.HOTP(hotp_key)
-    code = AuthCode(
-        code_otp=hotp.at(0),
-        user_id=user.id,
-        created_at=datetime.now(timezone.utc)
-    )
-    session.add_all([user, code])
+    
+    session.add(user)
     session.commit()
 
+    code = await AuthCode.create_code_for_user(session, user.id, AuthCodeType.auth)
     asyncio.create_task(notifier.notify_code(register_data.email, 'Регистрация', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
 
     return CodeIdData(code_id=code.id)
@@ -81,9 +76,22 @@ async def register_user(
     summary='Проверить 2FA-код'
 )
 async def check_code(response: Response, code_data: CodeData, session: Session = Depends(get_session)):
-    q = select(AuthCode).where(AuthCode.id == code_data.code_id).where(AuthCode.code_otp == code_data.code_otp)
+    q = select(AuthCode).where(AuthCode.id == code_data.code_id) #.where(AuthCode.code_otp == code_data.code_otp)
     code = session.exec(q).first()
     if code is None:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return Message(msg='Неверный код')
+
+    if code.code_otp != code_data.code_otp:
+        code.tries += 1
+        if code.tries >= AUTH_CODE_MAX_TRIES:
+            session.delete(code)
+            session.commit()
+            response.status_code = status.HTTP_429_TOO_MANY_REQUESTS
+            return Message(msg='Неверный код. Попытки исчерпаны.')
+        
+        session.add(code)
+        session.commit()
         response.status_code = status.HTTP_400_BAD_REQUEST
         return Message(msg='Неверный код')
 
@@ -95,7 +103,7 @@ async def check_code(response: Response, code_data: CodeData, session: Session =
 
     code_timed_out = False
     now = datetime.now(timezone.utc)
-    if (now - code.created_at).seconds >= AUTH_CODE_VALID_FOR * 60:
+    if (now - code.created_at) >= timedelta(minutes=AUTH_CODE_VALID_FOR):
         code_timed_out = True
 
     if code.auth_code_type == AuthCodeType.auth:
@@ -114,7 +122,8 @@ async def check_code(response: Response, code_data: CodeData, session: Session =
 
         subject = {
             'id': str(user.id),
-            'email': user.email
+            'email': user.email,
+            'credential_updates': user.credential_updates
         }
         access_token = access_security.create_access_token(subject=subject)
         refresh_token = refresh_security.create_refresh_token(subject=subject)
@@ -132,6 +141,8 @@ async def check_code(response: Response, code_data: CodeData, session: Session =
             response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
             return Message(msg='Срок действия кода истек')
         user.email = code.new_data['email']
+        user.email_verified = False
+        user.credential_updates += 1
         session.add(user)
         session.delete(code)
         session.commit()
@@ -143,6 +154,7 @@ async def check_code(response: Response, code_data: CodeData, session: Session =
             response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
             return Message(msg='Срок действия кода истек')
         user.password_hash = code.new_data['password']
+        user.credential_updates += 1
         session.add(user)
         session.delete(code)
         session.commit()
@@ -169,19 +181,21 @@ async def change_email(
     q = select(User).where(User.id == user_id)
     user = session.exec(q).first()
     if user is None:
+        response.status_code = status.HTTP_404_NOT_FOUND
         return Message(msg='Пользователь не найден')
+    
+    q = select(User).where(User.email == change_email_data.new_email)
+    existing_user = session.exec(q).first()
+    if existing_user is not None:
+        response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+        return Message(msg='Почта уже используется')
 
-    hotp_key = pyotp.random_base32()
-    hotp = pyotp.HOTP(hotp_key)
-    code = AuthCode(
-        code_otp=hotp.at(0),
-        user_id=user.id,
-        created_at=datetime.now(timezone.utc),
-        auth_code_type=AuthCodeType.email_change,
-        new_data={ 'email': change_email_data.new_email }
+    code = await AuthCode.create_code_for_user(
+        session, 
+        user.id, 
+        AuthCodeType.email_change, 
+        { 'email': change_email_data.new_email }
     )
-    session.add(code)
-    session.commit()
 
     asyncio.create_task(notifier.notify_code(user.email, 'Изменение почты', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
 
@@ -212,18 +226,12 @@ async def change_password(
         response.status_code = status.HTTP_403_FORBIDDEN
         return Message(msg='Введен неверный пароль')
 
-    hotp_key = pyotp.random_base32()
-    hotp = pyotp.HOTP(hotp_key)
-    code = AuthCode(
-        code_otp=hotp.at(0),
-        user_id=user.id,
-        created_at=datetime.now(timezone.utc),
-        auth_code_type=AuthCodeType.password_change,
-        new_data={ 'password': pwd_context.hash(change_password_data.new_password) }
+    code = await AuthCode.create_code_for_user(
+        session, 
+        user.id, 
+        AuthCodeType.password_change, 
+        { 'password': pwd_context.hash(change_password_data.new_password) }
     )
-    session.add(code)
-    session.commit()
-
     asyncio.create_task(notifier.notify_code(user.email, 'Изменение пароля', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
 
     return CodeIdData(code_id=code.id)
@@ -232,7 +240,7 @@ async def change_password(
     '/change_avatar',
     summary='Изменить аватар'
 )
-async def change_password(
+async def change_avatar(
     response: Response, 
     avatar: UploadFile,
     session: Session = Depends(get_session), 
@@ -284,16 +292,7 @@ async def login_user(login_data: LoginData, session: Session = Depends(get_sessi
     if not pwd_context.verify(login_data.password, user.password_hash):
         return Message(msg='Неверный email или пароль')
     
-    hotp_key = pyotp.random_base32()
-    hotp = pyotp.HOTP(hotp_key)
-    code = AuthCode(
-        code_otp=hotp.at(0),
-        user_id=user.id,
-        created_at=datetime.now(timezone.utc)
-    )
-    session.add_all([user, code])
-    session.commit()
-
+    code = await AuthCode.create_code_for_user(session, user.id, AuthCodeType.auth)
     asyncio.create_task(notifier.notify_code(login_data.email, 'Вход', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
 
     return CodeIdData(code_id=code.id)

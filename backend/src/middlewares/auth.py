@@ -40,7 +40,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
 
         with get_session_cm() as session:
-            q = select(User).where(User.id == credentials['id'])
+            q = (select(User).where(User.id == credentials['id'])
+                            .where(User.email == credentials['email'])
+                            .where(User.credential_updates == credentials['credential_updates']))
             user = session.exec(q).first()
             if not user:
                 return JSONResponse(

@@ -41,5 +41,5 @@ class Card(SQLModel, table=True):
     category_id: uuid.UUID = Field(sa_column=Column(GUID))
     author_id: uuid.UUID = Field(sa_column=Column(GUID))
     status: CardStatus = Field(default=CardStatus.review, sa_column=Column(Enum(CardStatus)))
-    visbility: CardVisibility = Field(default=CardVisibility.private, sa_column=Column(Enum(CardVisibility)))
+    visibility: CardVisibility = Field(default=CardVisibility.private, sa_column=Column(Enum(CardVisibility)))
     created_at: datetime.datetime = Field()

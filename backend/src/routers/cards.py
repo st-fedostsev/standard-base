@@ -69,9 +69,10 @@ async def create(
         response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         return Message(msg='Данные указаны неверно')
     
-    photo_data = await photo.read()
+    photo_data = await photo.read() if photo is not None else None
     card = Card(
         **card_create_data.model_dump(),
+        author_id=user.id,
         photo=photo_data,
         created_at=datetime.now(timezone.utc)
     )
@@ -89,26 +90,26 @@ async def get(
     session: Session = Depends(get_session), 
     credentials: JwtAuthorizationCredentials = Security(access_security)
 ):
-    q = select(Card).where(Card.visbility == CardVisibility.public)
+    q = select(Card).where(Card.visibility == CardVisibility.public)
     if credentials is not None:
-        q = select(Card).where(or_(Card.visbility == CardVisibility.public, CardVisibility == CardVisibility.protected))
+        q = select(Card).where(or_(Card.visibility == CardVisibility.public, CardVisibility == CardVisibility.protected))
     
     if card_get_data.created_from:
         q = q.where(Card.created_at >= card_get_data.created_from)
     if card_get_data.created_to:
-        q = q.where(Card.created_to < card_get_data.created_to)
+        q = q.where(Card.created_at < card_get_data.created_to)
     if card_get_data.title:
         q = q.where(column('title').ilike(f'%{card_get_data.title}%'))
     if card_get_data.status:
-        q = q.wheere(Card.status == card_get_data.status)
+        q = q.where(Card.status == card_get_data.status)
     if card_get_data.category:
-        q = q.where(Card.category == card_get_data.category)
+        q = q.where(Card.category_id == card_get_data.category)
     q = q.offset(card_get_data.offset).limit(card_get_data.limit)
     cards = session.exec(q)
 
     result = list(map(dict, cards))
     for i in range(len(result)):
-        result[i]['photo'] = base64.b64encode(result[i]['photo']).decode()
+        result[i]['photo'] = base64.b64encode(result[i]['photo']).decode() if result[i]['photo'] is not None else None
 
     return result
 
