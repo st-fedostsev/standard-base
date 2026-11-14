@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, Security, Response, status, Cookie
 from sqlmodel import Session, select
 from database.session import get_session
-from models import User, AuthCode
+from models import User, AuthCode, AUTH_CODE_VALID_FOR
 from pwdlib import PasswordHash
 from notifiers.email_notifier import EmailNotifier, get_email_notifier
 from schemas.users import *
@@ -13,6 +13,7 @@ from decouple import config
 import uuid
 import pyotp
 import asyncio
+from datetime import datetime, timezone
 
 
 router = APIRouter(
@@ -64,14 +65,13 @@ async def register_user(
     hotp = pyotp.HOTP(hotp_key)
     code = AuthCode(
         code_otp=hotp.at(0),
-        user_id=user.id
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc)
     )
     session.add_all([user, code])
     session.commit()
 
-    msg = f'Код: {code.code_otp}'
-    
-    asyncio.create_task(notifier.notify(register_data.email, 'Регистрация', msg))
+    asyncio.create_task(notifier.notify_code(register_data.email, 'Регистрация', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
 
     return CodeIdData(code_id=code.id)
 
@@ -85,12 +85,21 @@ async def check_code(response: Response, code_data: CodeData, session: Session =
     if code is None:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return Message(msg='Неверный код')
-    
+
     q = select(User).where(User.id == code.user_id)
     user = session.exec(q).first()
     if user is None:
         response.status_code = status.HTTP_404_NOT_FOUND
         return Message(msg='Пользователь не найден')
+
+    now = datetime.now(timezone.utc)
+    if (now - code.created_at).seconds >= AUTH_CODE_VALID_FOR * 60:
+        session.delete(code)
+        if not user.email_verified:
+            session.delete(user)
+        session.commit()
+        response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+        return Message(msg='Срок действия кода истек')
 
     user.email_verified = True
     session.add(user)
@@ -144,14 +153,13 @@ async def login_user(login_data: LoginData, session: Session = Depends(get_sessi
     hotp = pyotp.HOTP(hotp_key)
     code = AuthCode(
         code_otp=hotp.at(0),
-        user_id=user.id
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc)
     )
     session.add_all([user, code])
     session.commit()
 
-    msg = f'Код: {code.code_otp}'
-    
-    asyncio.create_task(notifier.notify(register_data.email, 'Вход', msg))
+    asyncio.create_task(notifier.notify_code(login_data.email, 'Вход', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
 
     return CodeIdData(code_id=code.id)
 
