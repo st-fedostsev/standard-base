@@ -111,3 +111,12 @@ async def get(
         result[i]['photo'] = base64.b64encode(result[i]['photo']).decode()
 
     return result
+
+@router.get(
+    '/categories',
+    summary='Получить категории карточек'
+)
+async def categories(response: Response, session: Session = Depends(get_session)):
+    q = select(CardCategory)
+    result = session.exec(q).all()
+    return list(map(dict, result))

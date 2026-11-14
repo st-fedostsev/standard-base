@@ -12,7 +12,17 @@ from models import User
 from typing import Any
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    EXCLUDED_PATHS = ['/favicon.ico', '/docs', '/openapi.json', '/users/register', '/users/check_code', '/users/login', '/users/refresh']
+    EXCLUDED_PATHS = [
+        '/favicon.ico', 
+        '/docs', 
+        '/openapi.json', 
+        '/users/register', 
+        '/users/check_code', 
+        '/users/login', 
+        '/users/refresh',
+        '/cards/get',
+        '/cards/categories'
+    ]
 
     def __init__(self, app):
         super().__init__(app)
