@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, Security, Response, status, Cookie
 from sqlmodel import Session, select
 from database.session import get_session
-from models import User, AuthCode, AUTH_CODE_VALID_FOR, Notification
+from models import User, AuthCode, AuthCodeType, AUTH_CODE_VALID_FOR, Notification
 from pwdlib import PasswordHash
 from notifiers.email_notifier import EmailNotifier, get_email_notifier
 from schemas.users import *
@@ -92,33 +92,140 @@ async def check_code(response: Response, code_data: CodeData, session: Session =
         response.status_code = status.HTTP_404_NOT_FOUND
         return Message(msg='Пользователь не найден')
 
+    code_timed_out = False
     now = datetime.now(timezone.utc)
     if (now - code.created_at).seconds >= AUTH_CODE_VALID_FOR * 60:
-        session.delete(code)
-        if not user.email_verified:
-            session.delete(user)
-        session.commit()
-        response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
-        return Message(msg='Срок действия кода истек')
+        code_timed_out = True
 
-    user.email_verified = True
-    session.add(user)
-    session.delete(code)
+    if code.auth_code_type == AuthCodeType.auth:
+        if code_timed_out:
+            session.delete(code)
+            if not user.email_verified:
+                session.delete(user)
+            session.commit()
+            response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+            return Message(msg='Срок действия кода истек')
+
+        user.email_verified = True
+        session.add(user)
+        session.delete(code)
+        session.commit()
+
+        subject = {
+            'id': str(user.id),
+            'email': user.email
+        }
+        access_token = access_security.create_access_token(subject=subject)
+        refresh_token = refresh_security.create_refresh_token(subject=subject)
+        response.set_cookie(
+            key='refresh_token_cookie',
+            value=refresh_token
+        )
+        return TokenData(
+            access_token=access_token
+        )
+    elif code.auth_code_type == AuthCodeType.email_change:
+        if code_timed_out:
+            session.delete(code)
+            session.commit()
+            response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+            return Message(msg='Срок действия кода истек')
+        user.email = code.new_data['email']
+        session.add(user)
+        session.delete(code)
+        session.commit()
+        return Message(msg='Данные сохранены')
+    elif code.auth_code_type == AuthCodeType.password_change:
+        if code_timed_out:
+            session.delete(code)
+            session.commit()
+            response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+            return Message(msg='Срок действия кода истек')
+        user.password_hash = code.new_data['password']
+        session.add(user)
+        session.delete(code)
+        session.commit()
+        return Message(msg='Данные сохранены')
+    response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    return Message(msg='Действие не может быть выполнено')
+
+@router.post(
+    '/change_email',
+    summary='Изменить почту'
+)
+async def change_email(
+    response: Response, 
+    change_email_data: ChangeEmailData, 
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security),
+    notifier: EmailNotifier = Depends(get_email_notifier)
+):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    
+    user_id = uuid.UUID(credentials['id'])
+    q = select(User).where(User.id == user_id)
+    user = session.exec(q).first()
+    if user is None:
+        return Message(msg='Пользователь не найден')
+
+    hotp_key = pyotp.random_base32()
+    hotp = pyotp.HOTP(hotp_key)
+    code = AuthCode(
+        code_otp=hotp.at(0),
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc),
+        auth_code_type=AuthCodeType.email_change,
+        new_data={ 'email': change_email_data.new_email }
+    )
+    session.add(code)
     session.commit()
 
-    subject = {
-        'id': str(user.id),
-        'email': user.email
-    }
-    access_token = access_security.create_access_token(subject=subject)
-    refresh_token = refresh_security.create_refresh_token(subject=subject)
-    response.set_cookie(
-        key='refresh_token_cookie',
-        value=refresh_token
+    asyncio.create_task(notifier.notify_code(user.email, 'Изменение почты', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
+
+    return CodeIdData(code_id=code.id)
+
+@router.post(
+    '/change_password',
+    summary='Изменить пароль'
+)
+async def change_password(
+    response: Response, 
+    change_password_data: ChangePasswordData, 
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security),
+    notifier: EmailNotifier = Depends(get_email_notifier)
+):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    
+    user_id = uuid.UUID(credentials['id'])
+    q = select(User).where(User.id == user_id)
+    user = session.exec(q).first()
+    if user is None:
+        return Message(msg='Пользователь не найден')
+
+    if not pwd_context.verify(change_password_data.current_password, user.password_hash):
+        response.status_code = status.HTTP_403_FORBIDDEN
+        return Message(msg='Введен неверный пароль')
+
+    hotp_key = pyotp.random_base32()
+    hotp = pyotp.HOTP(hotp_key)
+    code = AuthCode(
+        code_otp=hotp.at(0),
+        user_id=user.id,
+        created_at=datetime.now(timezone.utc),
+        auth_code_type=AuthCodeType.password_change,
+        new_data={ 'password': pwd_context.hash(change_password_data.new_password) }
     )
-    return TokenData(
-        access_token=access_token
-    )
+    session.add(code)
+    session.commit()
+
+    asyncio.create_task(notifier.notify_code(user.email, 'Изменение пароля', str(code.code_otp), str(AUTH_CODE_VALID_FOR)))
+
+    return CodeIdData(code_id=code.id)
 
 @router.post(
     '/refresh',

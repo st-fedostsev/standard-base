@@ -38,3 +38,10 @@ class ReadNotificationData(BaseModel):
 class NotificationsGetData(BaseModel):
     limit: int
     offset: int
+
+class ChangeEmailData(BaseModel):
+    new_email: str
+
+class ChangePasswordData(BaseModel):
+    current_password: str
+    new_password: str
