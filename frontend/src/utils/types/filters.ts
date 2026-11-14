@@ -1,10 +1,16 @@
 import type { Role } from '@/utils/types/roles';
 
-export type FilterOption = { value: string; label: string };
+export type FilterOption = {
+  value: string;
+  label: string;
+};
 
+/** Период дат. Пустая строка означает отсутствие границы. */
 export type DateRangeValue = {
-  /** YYYY-MM-DD, пусто: не задано. */
+  /** Начало периода, YYYY-MM-DD. */
   from: string;
+
+  /** Конец периода, YYYY-MM-DD. */
   to: string;
 };
 
@@ -16,13 +22,17 @@ export type FilterValues = Record<string, FilterValue>;
 type FilterBase = {
   /** Ключ в объекте значений. */
   key: string;
+
   /** Кто видит фильтр. Не задано: все. */
   roles?: readonly Role[];
 };
 
-/** Описание одного фильтра. Порядок в массиве задаёт порядок на панели. */
+/** Порядок описаний в массиве задаёт порядок фильтров на панели. */
 export type FilterDef =
-  | (FilterBase & { type: 'search'; placeholder: string })
+  | (FilterBase & {
+      type: 'search';
+      placeholder: string;
+    })
   | (FilterBase & {
       type: 'select';
       label: string;
@@ -36,7 +46,11 @@ export type FilterDef =
       options: readonly FilterOption[];
       width?: number;
     })
-  | (FilterBase & { type: 'dateRange'; fromLabel: string; toLabel: string });
+  | (FilterBase & {
+      type: 'dateRange';
+      fromLabel: string;
+      toLabel: string;
+    });
 
 /** Есть ли отличия от значений по умолчанию. */
 export function isFiltered<T extends FilterValues>(
@@ -48,7 +62,7 @@ export function isFiltered<T extends FilterValues>(
   );
 }
 
-/** Дата начала позже даты окончания: список тогда пуст. */
+/** Проверяет, что начало периода не позже его окончания. */
 export function isInvalidRange(range: DateRangeValue): boolean {
   return range.from !== '' && range.to !== '' && range.from > range.to;
 }

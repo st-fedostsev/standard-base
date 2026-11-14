@@ -2,7 +2,8 @@
 import { createTheme } from '@mui/material/styles';
 
 const ACCENT = 'rgba(25, 118, 210, 1)'; // акцент из презентации
-const ACCENT_HOVER = 'rgba(25, 118, 210, 1)'; // подобран мной: в образце наведения нет
+const ACCENT_HOVER = 'var(--primary-_states-selected, #1976D214)';
+// подобран мной: в образце наведения нет
 
 export const theme = createTheme({
   palette: {

@@ -22,6 +22,7 @@ import { MassActionsPanel } from '@/components/MassActionsPanel';
 import { PageLayout } from '@/components/PageLayout';
 import { PermissionGuard } from '@/components/PermissionGuard';
 
+import { MOCK_CARDS } from '@/utils/mocks/cards';
 import {
   CARD_CATEGORY_OPTIONS,
   CARD_STATUS_LABELS,
@@ -41,64 +42,6 @@ const USE_MOCK = true;
 const NO_CARDS: CardRow[] = [];
 
 const authorName = (a: CardAuthor) => `${a.lastName} ${a.firstName}`;
-
-// GUID в моках выдуманы. С backend придут настоящие
-const AUTHOR_STEPAN: CardAuthor = {
-  id: '5f2c8a1e-3b7d-4e9a-8c61-0d4b2e7f9a13',
-  firstName: 'Степан',
-  lastName: 'Федосцев',
-};
-
-const MOCK_CARDS: CardRow[] = [
-  {
-    id: 'e1a7c3d9-4b2f-4f6e-9a18-7c5d0b3e2f61',
-    title: 'Правила оформления материала',
-    category: 'Процессы',
-    author: AUTHOR_STEPAN,
-    status: 'published',
-    updatedAt: '2026-10-28T09:15:00',
-  },
-  {
-    id: '2f8b5e0c-6d1a-4c7b-8e93-1a4f7d2c5b08',
-    title: 'Чек-лист перед публикацией',
-    category: 'Инструменты',
-    author: AUTHOR_STEPAN,
-    status: 'draft',
-    updatedAt: '2026-11-02T14:40:00',
-  },
-  {
-    id: '7d3c9a6f-0e5b-4b1d-a2c8-5f7e9b4d1a72',
-    title: 'Пример: сокращение времени переналадки',
-    category: 'Показатели',
-    author: AUTHOR_STEPAN,
-    status: 'review',
-    updatedAt: '2026-10-30T11:05:00',
-  },
-  {
-    id: 'b4e0d8a2-9f3c-4e6a-b7d1-2c8a5f0e6d39',
-    title: 'Шаблон описания показателей',
-    category: 'Показатели',
-    author: AUTHOR_STEPAN,
-    status: 'returned',
-    updatedAt: '2026-10-21T16:20:00',
-  },
-  {
-    id: '0c6f2b7e-5a9d-4d3f-8b14-9e1c7a3f5d86',
-    title: 'Ведение журнала обращений',
-    category: 'Обучение',
-    author: AUTHOR_STEPAN,
-    status: 'archived',
-    updatedAt: '2026-09-12T10:00:00',
-  },
-  {
-    id: 'd9a5e1c4-7f2b-4a8e-9d6c-4b0f3e8a2c17',
-    title: 'Порядок согласования правок',
-    category: 'Процессы',
-    author: AUTHOR_STEPAN,
-    status: 'draft',
-    updatedAt: '2026-11-03T08:30:00',
-  },
-];
 
 const columns: Column<CardRow>[] = [
   {
@@ -155,9 +98,9 @@ const canSendToReview = (card: CardRow) =>
  */
 function filterCards(cards: CardRow[], f: CardFilters): CardRow[] {
   const q = f.search.trim().toLowerCase();
-  const { from, to } = f.updated;
+  const { from, to } = f.created;
   return cards.filter((c) => {
-    const day = c.updatedAt.slice(0, 10);
+    const day = c.createAt.slice(0, 10);
     return (
       (q === '' || c.title.toLowerCase().includes(q)) &&
       (f.status.length === 0 || f.status.includes(c.status)) &&
@@ -227,8 +170,8 @@ export function CardsPage() {
   const filterDefs: FilterDef[] = [
     {
       type: 'dateRange',
-      key: 'updated',
-      fromLabel: 'Обновлено с',
+      key: 'created',
+      fromLabel: 'Создано с',
       toLabel: 'по',
     },
     { type: 'search', key: 'search', placeholder: 'Поиск по названию' },

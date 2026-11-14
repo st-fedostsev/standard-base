@@ -1,3 +1,22 @@
 /* src/index.css
    Глобальные стили задаёт CssBaseline и тема MUI (src/App/theme.ts).
    Сюда добавить только то, что MUI не покрывает. */
+
+html,
+body {
+  margin: 0;
+}
+
+/*
+ * Не создаёт горизонтальный скролл документа.
+ * Для широкой таблицы скролл нужно задавать её контейнеру.
+ */
+html {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+#root {
+  min-width: 0;
+  min-height: 100vh;
+}
