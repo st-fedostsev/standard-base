@@ -337,7 +337,13 @@ async def notifications(
     if result is None:
         return []
 
-    return list(map(dict, result))
+    result = NotificationsGetResult(
+        result=len(result),
+        unread_count=len(list(filter(lambda x: not x.read, result))),
+        data=list(map(dict, result))
+    )
+
+    return result
 
 @router.post(
     '/read_notification',
