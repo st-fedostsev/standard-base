@@ -38,25 +38,28 @@ export type CardAuthor = {
   lastName: string;
 };
 
+export const CARD_VISIBILITIES = ['public', 'protected', 'private'] as const;
+export type CardVisibility = (typeof CARD_VISIBILITIES)[number];
+
 export type CardRow = {
   id: string;
   title: string;
   category: CardCategory;
   author: CardAuthor;
   status: CardStatus;
+  visibily: CardVisibility;
   /** Локальное время: YYYY-MM-DDTHH:mm:ss. */
-  updatedAt: string;
+  createAt: string;
 };
 
 export type CardFilters = {
   search: string;
-  /** Пусто: все статусы. */
   status: string[];
-  /** "all": все категории. */
   category: string;
-  /** "all": все авторы. */
   authorId: string;
-  updated: DateRangeValue;
+
+  /** Период создания карточки. */
+  created: DateRangeValue;
 };
 
 export const DEFAULT_CARD_FILTERS: CardFilters = {
@@ -64,5 +67,8 @@ export const DEFAULT_CARD_FILTERS: CardFilters = {
   status: [],
   category: 'all',
   authorId: 'all',
-  updated: { from: '', to: '' },
+  created: {
+    from: '',
+    to: '',
+  },
 };

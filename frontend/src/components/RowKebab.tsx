@@ -17,6 +17,7 @@ import { hasAccess } from '@/utils/types/roles';
 type RowKebabProps = {
   actions: ActionItem[];
   label?: string;
+  alwaysVisible?: boolean;
 };
 
 /**
@@ -28,6 +29,7 @@ type RowKebabProps = {
 export function RowKebab({
   actions,
   label = 'Действия со строкой',
+  alwaysVisible = false,
 }: RowKebabProps) {
   const role = useCurrentRole();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -46,7 +48,7 @@ export function RowKebab({
       sx={{
         display: 'inline-flex',
         // Пока меню открыто, кнопка остаётся видимой, даже если курсор ушёл на затемнение
-        opacity: anchor ? 1 : 0,
+        opacity: alwaysVisible || anchor ? 1 : 0,
         transition: 'opacity 120ms ease',
         '.MuiTableRow-root:hover &, .MuiTableRow-root:focus-within &': {
           opacity: 1,
