@@ -12,7 +12,17 @@ from models import User
 from typing import Any
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    EXCLUDED_PATHS = ['/favicon.ico', '/docs', '/openapi.json', '/users/register', '/users/check_code', '/users/login', '/users/refresh']
+    EXCLUDED_PATHS = [
+        '/favicon.ico', 
+        '/docs', 
+        '/openapi.json', 
+        '/users/register', 
+        '/users/check_code', 
+        '/users/login', 
+        '/users/refresh',
+        '/cards/get',
+        '/cards/categories'
+    ]
 
     def __init__(self, app):
         super().__init__(app)
@@ -30,7 +40,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
 
         with get_session_cm() as session:
-            q = select(User).where(User.id == credentials['id'])
+            q = (select(User).where(User.id == credentials['id'])
+                            .where(User.email == credentials['email'])
+                            .where(User.credential_updates == credentials['credential_updates']))
             user = session.exec(q).first()
             if not user:
                 return JSONResponse(

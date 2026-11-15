@@ -31,3 +31,18 @@ class UserData(BaseModel):
     patronymic: Optional[str] = None
     email: str
     role: str
+    avatar: Optional[str] = None
+
+class ReadNotificationData(BaseModel):
+    id: uuid.UUID
+
+class NotificationsGetData(BaseModel):
+    limit: int
+    offset: int
+
+class ChangeEmailData(BaseModel):
+    new_email: str
+
+class ChangePasswordData(BaseModel):
+    current_password: str
+    new_password: str
