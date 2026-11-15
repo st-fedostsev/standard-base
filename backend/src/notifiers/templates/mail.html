@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Код подтверждения — БАЗА СТАНДАРТОВ И ПРАКТИК</title>
+  <style>
+    @media only screen and (max-width: 620px) {
+      .email-shell { width: 100% !important; }
+      .mobile-padding { padding-left: 24px !important; padding-right: 24px !important; }
+      .code-text { font-size: 31px !important; letter-spacing: 5px !important; }
+      .body-title { font-size: 25px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F2F6FC;color:#24344F;font-family:Arial,Helvetica,sans-serif;">
+  <!--
+    Обязательные подстановки при отправке:
+      {{CODE}}        -> одноразовый код подтверждения, например 123456
+      {{TTL_MINUTES}} -> срок действия кода в минутах, например 10
+    Подставляйте значения НА СЕРВЕРЕ, до отправки email.
+    Отправляйте письмо с MIME Content-Type: text/html; charset=UTF-8.
+    Также добавьте обычную text/plain-версию письма.
+
+    ЛОГОТИП:
+    замените таблицу с буквами «БЛП» на изображение PNG/JPG по публичному HTTPS URL.
+    Пример:
+      <img src="https://your-domain.example/assets/logo.png"
+           width="54" height="54" alt="БАЗА СТАНДАРТОВ И ПРАКТИК"
+           style="display:block;border:0;width:54px;height:54px;object-fit:contain;">
+  -->
+  <div style="display:none;font-size:1px;line-height:1px;color:#F2F6FC;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">
+    Ваш код для подтверждения электронной почты в сервисе «БАЗА СТАНДАРТОВ И ПРАКТИК».
+  </div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background-color:#F2F6FC;">
+    <tr>
+      <td align="center" style="padding:48px 14px 50px;">
+        <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" class="email-shell" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:separate;width:100%;max-width:600px;background-color:#FFFFFF;border:1px solid #E0E8F4;border-radius:18px;overflow:hidden;">
+          <tr>
+            <td align="left" style="padding:0;background-color:#1554C0;height:7px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td class="mobile-padding" style="padding:32px 44px 27px;background-color:#FFFFFF;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                <tr>
+                  <td valign="middle" style="padding-right:14px;">
+                    <!-- ВРЕМЕННЫЙ ТЕКСТОВЫЙ ЛОГОТИП: замените эту таблицу на <img>, см. комментарий выше -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                      <tr>
+                        <td align="center" valign="middle" width="54" height="54" style="width:54px;height:54px;background-color:#1554C0;border-radius:13px;color:#FFFFFF;font-size:16px;font-weight:bold;letter-spacing:0.5px;">Б</td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td valign="middle" style="font-size:19px;line-height:25px;font-weight:700;color:#173A7E;">БАЗА СТАНДАРТОВ И ПРАКТИК</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="mobile-padding" style="padding:4px 44px 42px;">
+              <p style="margin:0 0 12px;color:#1554C0;font-size:12px;line-height:19px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase;">Безопасность аккаунта</p>
+              <h1 class="body-title" style="margin:0 0 20px;color:#102D64;font-size:31px;line-height:38px;font-weight:700;">Подтвердите вашу почту</h1>
+              <p style="margin:0 0 12px;color:#40516B;font-size:16px;line-height:26px;">Здравствуйте!</p>
+              <p style="margin:0 0 26px;color:#40516B;font-size:16px;line-height:26px;">Мы получили запрос на подтверждение электронной почты. Введите следующий код в приложении «БАЗА СТАНДАРТОВ И ПРАКТИК»:</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate;background-color:#EAF2FF;border:1px solid #C9DCFC;border-radius:14px;">
+                <tr>
+                  <td align="center" style="padding:29px 12px 28px;">
+                    <p style="margin:0 0 12px;font-size:12px;line-height:18px;color:#4B6EAA;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;">Ваш код подтверждения</p>
+                    <p class="code-text" style="margin:0;font-family:Arial,Helvetica,sans-serif;color:#134FB4;font-size:38px;line-height:46px;font-weight:700;letter-spacing:8px;word-break:break-all;">{{CODE}}</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:19px 0 28px;color:#62718A;font-size:14px;line-height:23px;text-align:center;">Код действителен в течение <strong style="color:#173A7E;">{{TTL_MINUTES}} минут</strong>.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                <tr>
+                  <td style="border-top:1px solid #E5ECF6;padding-top:24px;">
+                    <p style="margin:0;color:#62718A;font-size:14px;line-height:23px;">Если вы не запрашивали этот код, просто проигнорируйте письмо. Никому не сообщайте код подтверждения.</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:29px 0 0;color:#40516B;font-size:15px;line-height:25px;">С уважением,<br><strong style="color:#173A7E;">команда «БАЗА СТАНДАРТОВ И ПРАКТИК»</strong></p>
+            </td>
+          </tr>
+          <tr>
+            <td class="mobile-padding" style="padding:21px 44px 24px;background-color:#F7F9FD;border-top:1px solid #E6ECF5;">
+              <p style="margin:0;color:#8996A9;font-size:12px;line-height:19px;text-align:center;">Это автоматическое письмо. Пожалуйста, не отвечайте на него.</p>
+              <p style="margin:6px 0 0;color:#8996A9;font-size:12px;line-height:19px;text-align:center;">© БАЗА СТАНДАРТОВ И ПРАКТИК</p>
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
