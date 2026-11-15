@@ -40,6 +40,11 @@ class NotificationsGetData(BaseModel):
     limit: int
     offset: int
 
+class NotificationsGetResult(BaseModel):
+    result: int
+    unread_count: int
+    data: list
+
 class ChangeEmailData(BaseModel):
     new_email: str
 
