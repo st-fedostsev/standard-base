@@ -6,7 +6,7 @@ import { defineConfig, loadEnv } from 'vite';
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const host = env.HOST || 'localhost';
+  const host = env.HOST;
   const api_host = env.API_PROXY_TARGET;
   const port = 5173;
 

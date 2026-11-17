@@ -1,10 +1,10 @@
 import type { NavItem } from '@/utils/types/navigation';
-import PlaylistAddCheck from '@mui/icons-material/PlaylistAddCheck';
-import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
 import HelpOutlined from '@mui/icons-material/HelpOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import PlaylistAddCheck from '@mui/icons-material/PlaylistAddCheck';
+import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
 
 import { ROLES } from './types/roles';
 
