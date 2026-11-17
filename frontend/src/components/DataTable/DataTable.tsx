@@ -33,6 +33,7 @@ export function DataTable<T>({
   kebabMenu,
   onRowClick,
   renderCardMedia,
+  toolbarStart,
   isLoading = false,
   errorText,
   empty,
@@ -161,9 +162,22 @@ export function DataTable<T>({
         minWidth: 0,
       }}
     >
-      {/* Переключатель не показываем до первого измерения контейнера. */}
+      {/* Счётчик слева, переключатель вида справа */}
       {width !== null && (
-        <Box sx={{ mb: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1,
+            minWidth: 0,
+            width: '100%',
+            mb: 2,
+          }}
+        >
+          <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>{toolbarStart}</Box>
+
           <ViewSwitcher
             value={currentView}
             onChange={setPreferredView}

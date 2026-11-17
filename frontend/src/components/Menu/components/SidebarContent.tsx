@@ -2,7 +2,6 @@ import { Box, Divider, List } from '@mui/material';
 
 import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
 import type { NavItem } from '@/utils/types/navigation';
-import type { NotificationItem } from '@/utils/types/notifications';
 import { hasAccess } from '@/utils/types/roles';
 
 import styles from '../Menu.module.css';
@@ -23,13 +22,10 @@ type SidebarContentProps = {
   showLabels: boolean;
   isMobile: boolean;
 
-  notifications: readonly NotificationItem[];
-  unreadNotificationsCount: number;
+  /** Состояние открытия панели уведомлений. */
   notificationsOpen: boolean;
   onOpenNotifications: () => void;
   onCloseNotifications: () => void;
-  onMarkNotificationRead: (id: string) => void;
-  onHideNotification: (id: string) => void;
 
   onNavigate: () => void;
 };
@@ -41,18 +37,15 @@ export function SidebarContent({
   rail,
   showLabels,
   isMobile,
-  notifications,
-  unreadNotificationsCount,
   notificationsOpen,
   onOpenNotifications,
   onCloseNotifications,
-  onMarkNotificationRead,
-  onHideNotification,
   onNavigate,
 }: SidebarContentProps) {
   const role = useCurrentRole();
 
   const visibleItems = items.filter((item) => hasAccess(role, item.roles));
+
   const visibleFooterItems = footerItems.filter((item) =>
     hasAccess(role, item.roles)
   );
@@ -63,16 +56,12 @@ export function SidebarContent({
 
       <Divider className={styles.menuDivider} />
 
-      {/* Аналог SideMenu.Body */}
+      {/* Основные пункты меню */}
       <List component='div' disablePadding className={styles.body}>
         <NotificationMenuItem
-          notifications={notifications}
-          unreadCount={unreadNotificationsCount}
           open={notificationsOpen}
           onOpen={onOpenNotifications}
           onClose={onCloseNotifications}
-          onMarkRead={onMarkNotificationRead}
-          onHide={onHideNotification}
           rail={rail}
           expanded={showLabels}
           isMobile={isMobile}
@@ -90,7 +79,6 @@ export function SidebarContent({
         ))}
       </List>
 
-      {/* Аналог SideMenu.Footer */}
       {/* Нижние пункты и пользователь */}
       <Box
         sx={{

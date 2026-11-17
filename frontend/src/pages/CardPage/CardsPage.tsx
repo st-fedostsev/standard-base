@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { PageLayout } from '@/App/PageLayout';
 import { useQuery } from '@tanstack/react-query';
 
 import { Button, Chip, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
 import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
 import SendOutlined from '@mui/icons-material/SendOutlined';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
@@ -19,7 +22,6 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { FilterBar } from '@/components/FilterBar';
 import { MassActionsPanel } from '@/components/MassActionsPanel';
-import { PageLayout } from '@/components/PageLayout';
 import { PermissionGuard } from '@/components/PermissionGuard';
 
 import { MOCK_CARDS } from '@/utils/mocks/cards';
@@ -96,16 +98,21 @@ const canSendToReview = (card: CardRow) =>
  * Фильтрация на клиенте. Только для заглушки: с backend фильтры уходят в
  * запрос.
  */
-function filterCards(cards: CardRow[], f: CardFilters): CardRow[] {
-  const q = f.search.trim().toLowerCase();
-  const { from, to } = f.created;
-  return cards.filter((c) => {
-    const day = c.createAt.slice(0, 10);
+function filterCards(cards: CardRow[], filters: CardFilters): CardRow[] {
+  const query = filters.search.trim().toLocaleLowerCase('ru');
+  const { from, to } = filters.created;
+
+  return cards.filter((card) => {
+    // Использую твоё текущее имя поля createAt.
+    const day = card.createAt.slice(0, 10);
+
     return (
-      (q === '' || c.title.toLowerCase().includes(q)) &&
-      (f.status.length === 0 || f.status.includes(c.status)) &&
-      (f.category === 'all' || c.category === f.category) &&
-      (f.authorId === 'all' || c.author.id === f.authorId) &&
+      (query === '' || card.title.toLocaleLowerCase('ru').includes(query)) &&
+      (filters.status.length === 0 || filters.status.includes(card.status)) &&
+      (filters.category.length === 0 ||
+        filters.category.includes(card.category)) &&
+      (filters.authorIds.length === 0 ||
+        filters.authorIds.includes(card.author.id)) &&
       (from === '' || day >= from) &&
       (to === '' || day <= to)
     );
@@ -123,6 +130,7 @@ export function CardsPage() {
     isError,
   } = useQuery<CardRow[]>({
     queryKey: ['cards'],
+    meta: { globalLoader: true },
     queryFn: async () => {
       if (USE_MOCK) {
         // Задержка нужна, чтобы увидеть скелетоны загрузки
@@ -174,27 +182,34 @@ export function CardsPage() {
       fromLabel: 'Создано с',
       toLabel: 'по',
     },
-    { type: 'search', key: 'search', placeholder: 'Поиск по названию' },
+    {
+      type: 'search',
+      key: 'search',
+      placeholder: 'Поиск по названию',
+    },
     {
       type: 'multiselect',
       key: 'status',
       label: 'Статус',
       options: CARD_STATUS_OPTIONS,
-      width: 220,
+      width: 200,
     },
     {
-      type: 'select',
+      type: 'multiselect',
       key: 'category',
       label: 'Категория',
-      allLabel: 'Все категории',
       options: CARD_CATEGORY_OPTIONS,
+      width: 200,
     },
     {
-      type: 'select',
-      key: 'authorId',
+      type: 'multiselect',
+      key: 'authorIds',
       label: 'Автор',
-      allLabel: 'Все авторы',
-      options: authors.map((a) => ({ value: a.id, label: authorName(a) })),
+      options: authors.map((author) => ({
+        value: author.id,
+        label: authorName(author),
+      })),
+      searchable: true,
       roles: [ROLES.Admin],
     },
   ];
@@ -236,10 +251,24 @@ export function CardsPage() {
 
   return (
     <PageLayout
-      title='Карточки'
-      subtitle={isPending ? undefined : counter}
+      title='Реестр решений'
       actions={
-        <PermissionGuard allowed={[ROLES.Guest, ROLES.Author, ROLES.Admin]}>
+        <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
+          <Button
+            variant='outlined'
+            startIcon={<FileUploadOutlinedIcon />}
+            disabled // TODO: подключить экспорт
+          >
+            Экспортировать
+          </Button>
+          <Button
+            variant='outlined'
+            startIcon={<FileDownloadOutlinedIcon />}
+            disabled // TODO: подключить импорт
+          >
+            Импортировать
+          </Button>
+
           <Button
             variant='contained'
             startIcon={<AddIcon />}
@@ -259,6 +288,13 @@ export function CardsPage() {
       }
     >
       <DataTable
+        toolbarStart={
+          !isPending && !isError ? (
+            <Typography variant='body2' sx={{ fontWeight: 600, fontSize: 24 }}>
+              {counter}
+            </Typography>
+          ) : null
+        }
         columns={columns}
         rows={rows}
         getRowId={(c) => c.id}

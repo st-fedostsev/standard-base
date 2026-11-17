@@ -6,7 +6,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { Sticky } from '@/components/Sticky';
 
 import type { NavItem } from '@/utils/types/navigation';
-import type { NotificationItem } from '@/utils/types/notifications';
 
 import styles from './Menu.module.css';
 import {
@@ -20,29 +19,15 @@ type MenuProps = {
   footerItems?: NavItem[];
   title?: string;
   children: ReactNode;
-
-  notifications: readonly NotificationItem[];
-  unreadNotificationsCount: number;
-  onMarkNotificationRead: (id: string) => void;
-  onHideNotification: (id: string) => void;
 };
 
-export function Menu({
-  items,
-  footerItems = [],
-  title,
-  children,
-  notifications,
-  unreadNotificationsCount,
-  onMarkNotificationRead,
-  onHideNotification,
-}: MenuProps) {
-  // В примере Контура граница мобильного меню — около 992px.
+export function Menu({ items, footerItems = [], title, children }: MenuProps) {
+  // До 992px — мобильное меню.
   const isMobile = useMediaQuery('(max-width: 991.95px)', {
     noSsr: true,
   });
 
-  // Сохраняем ранее согласованный режим иконок на средней ширине.
+  // От 992px до 1200px — меню с иконками.
   const isRail = useMediaQuery(
     '(min-width: 992px) and (max-width: 1199.95px)',
     { noSsr: true }
@@ -53,6 +38,7 @@ export function Menu({
   const [focused, setFocused] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  // В режиме иконок меню остаётся раскрытым, пока открыты уведомления.
   const expanded = !isRail || hovered || focused || notificationsOpen;
 
   const closeMobileDrawer = () => {
@@ -68,13 +54,9 @@ export function Menu({
       rail={isMobile ? false : isRail}
       showLabels={isMobile ? true : expanded}
       isMobile={isMobile}
-      notifications={notifications}
-      unreadNotificationsCount={unreadNotificationsCount}
       notificationsOpen={notificationsOpen}
       onOpenNotifications={() => setNotificationsOpen(true)}
       onCloseNotifications={() => setNotificationsOpen(false)}
-      onMarkNotificationRead={onMarkNotificationRead}
-      onHideNotification={onHideNotification}
       onNavigate={closeMobileDrawer}
     />
   );
@@ -83,7 +65,7 @@ export function Menu({
     <Box className={styles.layout}>
       {isMobile ? (
         <>
-          {/* Белая подложка мобильной шапки, как smallMenuBackground. */}
+          {/* Подложка мобильной шапки. */}
           <Box className={styles.smallMenuBackground}>
             <IconButton
               aria-label='Открыть меню'
@@ -114,10 +96,7 @@ export function Menu({
         </>
       ) : (
         <Sticky side='top' className={styles.sticky}>
-          {/*
-            Ширина Sticky резервирует место под меню.
-            В режиме иконок раскрытая панель показывается поверх страницы.
-          */}
+          {/* В режиме иконок раскрытая панель находится поверх страницы. */}
           <Box
             sx={{
               position: 'relative',
@@ -152,12 +131,12 @@ export function Menu({
 
       <Box
         component='main'
+        className={styles.main}
         sx={{
           flex: '1 1 0',
           minWidth: 0,
           boxSizing: 'border-box',
         }}
-        className={styles.main}
       >
         {children}
       </Box>

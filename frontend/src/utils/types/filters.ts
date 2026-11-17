@@ -45,6 +45,9 @@ export type FilterDef =
       label: string;
       options: readonly FilterOption[];
       width?: number;
+
+      /** Показывать поиск внутри списка. */
+      searchable?: boolean;
     })
   | (FilterBase & {
       type: 'dateRange';

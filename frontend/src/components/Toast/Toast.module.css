@@ -1,0 +1,11 @@
+.toast {
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 32px));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+/* Длинный текст и идентификаторы не должны выходить за рамки. */
+.toast :global(.MuiAlert-message) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

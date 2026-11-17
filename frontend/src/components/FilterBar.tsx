@@ -1,8 +1,10 @@
 import { Fragment } from 'react';
 
 import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
+import CancelOutlined from '@mui/icons-material/CancelOutlined';
 
 import { DateRangeField } from '@/components/DateRangeField';
+import fieldStyles from '@/components/FilterField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { SearchInput } from '@/components/SearchInput';
@@ -17,21 +19,39 @@ import {
 } from '@/utils/types/filters';
 
 type FilterBarProps<T extends FilterValues> = {
-  /** Описание фильтров в порядке вывода. */
+  /** Описания фильтров в порядке отображения. */
   defs: FilterDef[];
+
+  /** Текущие значения фильтров. */
   value: T;
-  /** «Сбросить» возвращает эти значения. Кнопка видна, пока value отличается. */
+
+  /** Начальные значения, к которым возвращает кнопка сброса. */
   defaults: T;
+
   onChange: (next: T) => void;
   dataTid?: string;
 };
 
 const DEFAULT_SELECT_WIDTH = 200;
+const SEARCH_WIDTH = 280;
+const DATE_RANGE_WIDTH = 340;
 
-/**
- * Общая панель фильтров. Поля выводятся по описанию defs. Фильтр с roles скрыт
- * для остальных ролей. Это только интерфейс: данные защищает backend.
- */
+/** Проверяет, изменилось ли значение относительно начального. */
+function isFieldChanged(
+  current: FilterValue | undefined,
+  initial: FilterValue | undefined
+): boolean {
+  // Для множественного выбора порядок значений не важен.
+  if (Array.isArray(current) && Array.isArray(initial)) {
+    return (
+      current.length !== initial.length ||
+      current.some((item) => !initial.includes(item))
+    );
+  }
+
+  return JSON.stringify(current) !== JSON.stringify(initial);
+}
+
 export function FilterBar<T extends FilterValues>({
   defs,
   value,
@@ -40,54 +60,64 @@ export function FilterBar<T extends FilterValues>({
   dataTid = 'filter-bar',
 }: FilterBarProps<T>) {
   const read = (key: string) => value[key];
-  const set = (key: string, next: FilterValue) =>
+
+  const set = (key: string, next: FilterValue) => {
     onChange({ ...value, [key]: next } as T);
+  };
 
   const renderField = (def: FilterDef) => {
     switch (def.type) {
+      case 'dateRange':
+        return (
+          <DateRangeField
+            value={read(def.key) as DateRangeValue}
+            defaultValue={defaults[def.key] as DateRangeValue}
+            onChange={(next) => set(def.key, next)}
+            fromLabel={def.fromLabel}
+            toLabel={def.toLabel}
+          />
+        );
+
       case 'search':
         return (
           <SearchInput
             value={read(def.key) as string}
-            onChange={(v) => set(def.key, v)}
+            onChange={(next) => set(def.key, next)}
             placeholder={def.placeholder}
+            fullWidth
           />
         );
+
       case 'select':
         return (
           <TextField
             select
+            fullWidth
             size='small'
             label={def.label}
             value={read(def.key) as string}
-            onChange={(e) => set(def.key, e.target.value)}
-            sx={{ width: def.width ?? DEFAULT_SELECT_WIDTH }}
+            onChange={(event) => set(def.key, event.target.value)}
           >
             <MenuItem value='all'>{def.allLabel}</MenuItem>
-            {def.options.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
+
+            {def.options.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
               </MenuItem>
             ))}
           </TextField>
         );
+
       case 'multiselect':
         return (
           <MultiSelectField
             label={def.label}
             options={def.options}
             value={read(def.key) as string[]}
-            onChange={(v) => set(def.key, v)}
-            width={def.width}
-          />
-        );
-      case 'dateRange':
-        return (
-          <DateRangeField
-            value={read(def.key) as DateRangeValue}
-            onChange={(v) => set(def.key, v)}
-            fromLabel={def.fromLabel}
-            toLabel={def.toLabel}
+            onChange={(next) => set(def.key, next)}
+            searchable={def.searchable}
+            active={isFieldChanged(value[def.key], defaults[def.key])}
+            width='100%'
           />
         );
     }
@@ -102,40 +132,98 @@ export function FilterBar<T extends FilterValues>({
   return (
     <Box
       data-tid={dataTid}
-      sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}
+      sx={{
+        width: '100%',
+        minWidth: 0,
+        containerType: 'inline-size',
+        containerName: 'filters',
+      }}
     >
-      {defs.map((def) => {
-        const field = renderField(def);
-        return (
-          <Fragment key={def.key}>
-            {def.roles ? (
-              <PermissionGuard allowed={def.roles}>{field}</PermissionGuard>
-            ) : (
-              field
-            )}
-          </Fragment>
-        );
-      })}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          gap: 1.5,
+          minWidth: 0,
+        }}
+      >
+        {defs.map((def) => {
+          const preferredWidth =
+            def.type === 'dateRange'
+              ? DATE_RANGE_WIDTH
+              : def.type === 'search'
+                ? SEARCH_WIDTH
+                : (def.width ?? DEFAULT_SELECT_WIDTH);
 
-      {isFiltered(value, defaults) && (
-        <Button
-          variant='text'
-          onClick={() => onChange(defaults)}
-          sx={{ whiteSpace: 'nowrap' }}
-        >
-          Сбросить
-        </Button>
-      )}
+          /*
+           * Даты выделяются отдельно внутри DateRangeField:
+           * можно выбрать только начало или только конец периода.
+           */
+          const changed =
+            def.type !== 'dateRange' &&
+            isFieldChanged(value[def.key], defaults[def.key]);
 
-      {hasInvalidRange && (
-        <Typography
-          variant='caption'
-          sx={{ width: '100%', color: 'error.main' }}
-        >
-          Дата начала периода позже даты окончания. Исправьте период, иначе
-          список будет пуст.
-        </Typography>
-      )}
+          const field = (
+            <Box
+              className={changed ? fieldStyles.active : undefined}
+              sx={{
+                // На широком экране фильтр не растягивается.
+                flex: `0 1 ${preferredWidth}px`,
+                width: preferredWidth,
+                maxWidth: '100%',
+                minWidth: 0,
+
+                // На узкой области каждый фильтр занимает строку.
+                '@container filters (max-width: 440px)': {
+                  flex: '1 1 100%',
+                  width: '100%',
+                },
+              }}
+            >
+              {renderField(def)}
+            </Box>
+          );
+
+          return (
+            <Fragment key={def.key}>
+              {def.roles ? (
+                <PermissionGuard allowed={def.roles}>{field}</PermissionGuard>
+              ) : (
+                field
+              )}
+            </Fragment>
+          );
+        })}
+
+        {isFiltered(value, defaults) && (
+          <Button
+            variant='text'
+            color='inherit'
+            startIcon={<CancelOutlined fontSize='small' />}
+            onClick={() => onChange(defaults)}
+            sx={{
+              maxWidth: '100%',
+              alignSelf: 'center',
+              textTransform: 'none',
+            }}
+          >
+            Сбросить
+          </Button>
+        )}
+
+        {hasInvalidRange && (
+          <Typography
+            variant='caption'
+            sx={{
+              flexBasis: '100%',
+              color: 'error.main',
+            }}
+          >
+            Дата начала периода позже даты окончания.
+          </Typography>
+        )}
+      </Box>
     </Box>
   );
 }

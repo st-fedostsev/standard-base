@@ -25,40 +25,27 @@ type AuthPhase = 'restoring' | 'guest' | 'authenticated' | 'error';
 type Session = {
   phase: AuthPhase;
   accessToken: string | null;
-
-  /** Разделяет данные разных сессий в кэше. Сам токен в ключ не попадает. */
   revision: number;
 };
 
-/**
- * Один запрос восстановления на вкладку.
- *
- * В React StrictMode эффекты могут запускаться повторно. Пока запрос
- * выполняется, повторный вызов использует тот же Promise.
- */
-let restorePromise: Promise<string> | null = null;
+/** Не даём React StrictMode отправить два refresh-запроса при первом запуске. */
+let refreshPromise: Promise<string> | null = null;
 
 function restoreAccessToken(): Promise<string> {
-  if (restorePromise) {
-    return restorePromise;
+  if (refreshPromise !== null) {
+    return refreshPromise;
   }
 
   const request = api.Auth.refreshAccessToken();
-  restorePromise = request;
+  refreshPromise = request;
 
-  // Освобождаем Promise после завершения, не скрывая исходную ошибку.
-  void request.then(
-    () => {
-      if (restorePromise === request) {
-        restorePromise = null;
-      }
-    },
-    () => {
-      if (restorePromise === request) {
-        restorePromise = null;
-      }
+  const clearPromise = () => {
+    if (refreshPromise === request) {
+      refreshPromise = null;
     }
-  );
+  };
+
+  void request.then(clearPromise, clearPromise);
 
   return request;
 }
@@ -71,6 +58,8 @@ function isUnauthorized(error: unknown): boolean {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
+  const tokenRef = useRef<string | null>(null);
+  const authRevisionRef = useRef(0);
 
   const [session, setSession] = useState<Session>({
     phase: 'restoring',
@@ -78,13 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     revision: 0,
   });
 
-  // Axios получает актуальный токен через функцию из tokenStore.
-  const tokenRef = useRef<string | null>(null);
-
-  // Позволяет не применять устаревший результат восстановления,
-  // если пользователь уже вошёл или вышел.
-  const authRevisionRef = useRef(0);
-
+  // Axios получает актуальный access-токен из памяти провайдера.
   useLayoutEffect(() => {
     setAccessTokenReader(() => tokenRef.current);
 
@@ -96,8 +79,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const currentUserQuery = useQuery({
     queryKey: ['auth', 'me', session.revision],
     queryFn: ({ signal }) => api.Auth.getCurrentUser(signal),
-
-    // /me вызывается только после получения access-токена.
     enabled: session.phase === 'authenticated' && session.accessToken !== null,
 
     retry: (failureCount, error) => {
@@ -111,17 +92,65 @@ export function AuthProvider({ children }: AuthProviderProps) {
     refetchOnWindowFocus: 'always',
   });
 
-  /**
-   * Вызывается после входа или подтверждения регистрации. Сохраняет
-   * access-токен и запускает запрос /users/me.
-   */
+  const restoreSession = useCallback(async () => {
+    const revision = ++authRevisionRef.current;
+
+    tokenRef.current = null;
+    setSession({
+      phase: 'restoring',
+      accessToken: null,
+      revision,
+    });
+
+    try {
+      const accessToken = await restoreAccessToken();
+
+      if (authRevisionRef.current !== revision) {
+        return;
+      }
+
+      tokenRef.current = accessToken;
+
+      setSession({
+        phase: 'authenticated',
+        accessToken,
+        revision,
+      });
+    } catch (error) {
+      if (authRevisionRef.current !== revision) {
+        return;
+      }
+
+      tokenRef.current = null;
+
+      if (isUnauthorized(error)) {
+        // Нет действующей refresh-cookie: продолжаем как гость.
+        setSession({
+          phase: 'guest',
+          accessToken: null,
+          revision,
+        });
+        return;
+      }
+
+      // Сеть или сервер недоступны — это ошибка, а не гостевая сессия.
+      setSession({
+        phase: 'error',
+        accessToken: null,
+        revision,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    void restoreSession();
+  }, [restoreSession]);
+
   const startSession = useCallback(
     (accessToken: string) => {
       const revision = ++authRevisionRef.current;
 
       tokenRef.current = accessToken;
-
-      // Очищаем данные предыдущей сессии.
       queryClient.clear();
 
       setSession({
@@ -133,10 +162,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [queryClient]
   );
 
-  /**
-   * Пока это локальный выход: очищает access-токен и кэш. HttpOnly cookie
-   * должен удалить или отозвать бэкенд.
-   */
   const logout = useCallback(async () => {
     const revision = ++authRevisionRef.current;
 
@@ -150,83 +175,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     await queryClient.cancelQueries();
     queryClient.clear();
+
+    // Пока нет logout-эндпоинта, это очищает только состояние фронтенда.
+    // Refresh-cookie должен удалять или отзывать сервер.
   }, [queryClient]);
 
-  /**
-   * При открытии или обновлении вкладки пытаемся восстановить сессию через
-   * refresh-cookie.
-   */
-  useEffect(() => {
-    let active = true;
-    const revision = authRevisionRef.current;
-
-    const restoreSession = async () => {
-      try {
-        const accessToken = await restoreAccessToken();
-
-        if (!active || authRevisionRef.current !== revision) {
-          return;
-        }
-
-        const newRevision = ++authRevisionRef.current;
-        tokenRef.current = accessToken;
-
-        setSession({
-          phase: 'authenticated',
-          accessToken,
-          revision: newRevision,
-        });
-      } catch (error) {
-        if (!active || authRevisionRef.current !== revision) {
-          return;
-        }
-
-        tokenRef.current = null;
-
-        if (isUnauthorized(error)) {
-          // Нет действующей refresh-сессии — пользователь гость.
-          setSession({
-            phase: 'guest',
-            accessToken: null,
-            revision,
-          });
-          return;
-        }
-
-        // Ошибка сети, сервера или неожиданный ответ refresh.
-        setSession({
-          phase: 'error',
-          accessToken: null,
-          revision,
-        });
-      }
-    };
-
-    void restoreSession();
-
-    return () => {
-      // Не отменяем сам запрос: при повторном запуске эффекта в StrictMode
-      // следующий вызов сможет использовать тот же Promise.
-      active = false;
-    };
-  }, []);
-
-  /**
-   * Временное поведение до автоматического обновления access-токена: если
-   * именно /users/me вернул 401, очищаем локальную сессию.
-   */
+  // Если /users/me вернул 401, access-токен очищается.
   useEffect(() => {
     if (
-      session.phase !== 'authenticated' ||
-      session.accessToken === null ||
-      authRevisionRef.current !== session.revision ||
-      tokenRef.current !== session.accessToken ||
-      !isUnauthorized(currentUserQuery.error)
+      session.phase === 'authenticated' &&
+      session.accessToken !== null &&
+      authRevisionRef.current === session.revision &&
+      tokenRef.current === session.accessToken &&
+      isUnauthorized(currentUserQuery.error)
     ) {
-      return;
+      void logout();
     }
-
-    void logout();
   }, [
     currentUserQuery.error,
     logout,
@@ -235,7 +199,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session.revision,
   ]);
 
-  /** Повторно загружает данные пользователя. Это не refresh токена. */
   const refreshUser = useCallback(async () => {
     if (session.phase !== 'authenticated') return;
 
@@ -244,6 +207,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       exact: true,
     });
   }, [queryClient, session.phase, session.revision]);
+
+  const retryAuth = useCallback(async () => {
+    if (session.accessToken !== null) {
+      await refreshUser();
+      return;
+    }
+
+    await restoreSession();
+  }, [refreshUser, restoreSession, session.accessToken]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -264,6 +236,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       startSession,
       refreshUser,
+      retryAuth,
       logout,
     }),
     [
@@ -272,6 +245,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       currentUserQuery.isPending,
       logout,
       refreshUser,
+      retryAuth,
       session.accessToken,
       session.phase,
       startSession,
