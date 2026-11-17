@@ -69,12 +69,10 @@ async def create(
     try:
         card_create_data = CardCreateData.model_validate_json(data)
     except Exception as e:
-        print(e)
         response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         return Message(msg='Данные указаны неверно')
     
     photo_data = await photo.read() if photo is not None else None
-    print(card_create_data.model_dump())
     card = Card(
         **card_create_data.model_dump(),
         author_id=user.id,
