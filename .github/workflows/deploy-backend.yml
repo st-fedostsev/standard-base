@@ -1,0 +1,91 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [dev, rc]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to server
+        env:
+          DEPLOY_HOST: 153.51.173.24
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          BACKEND_ENV_FILE: ${{ secrets.BACKEND_ENV_FILE }}
+          POSTGRES_ENV_FILE: ${{ secrets.POSTGRES_ENV_FILE }}
+        run: |
+          set -euo pipefail
+
+          : "${DEPLOY_USER:?Add DEPLOY_USER to GitHub secrets}"
+          : "${DEPLOY_SSH_KEY:?Add DEPLOY_SSH_KEY to GitHub secrets}"
+          : "${SSH_KNOWN_HOSTS:?Add SSH_KNOWN_HOSTS to GitHub secrets}"
+          : "${BACKEND_ENV_FILE:?Add BACKEND_ENV_FILE to GitHub secrets}"
+          : "${POSTGRES_ENV_FILE:?Add POSTGRES_ENV_FILE to GitHub secrets}"
+
+          case "$GITHUB_REF_NAME" in
+            dev) COMPOSE_FILE="docker-compose.dev.yml" ;;
+            rc)  COMPOSE_FILE="docker-compose.yml" ;;
+            *)   echo "Unsupported branch: $GITHUB_REF_NAME"; exit 1 ;;
+          esac
+
+          SSH_DIR="$RUNNER_TEMP/deploy-ssh"
+          REMOTE_DIR="backend-app"
+
+          install -d -m 700 "$SSH_DIR"
+          trap 'rm -rf "$SSH_DIR"' EXIT
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$SSH_DIR/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$SSH_DIR/known_hosts"
+          chmod 600 "$SSH_DIR/key" "$SSH_DIR/known_hosts"
+
+          cat > "$SSH_DIR/config" <<EOF
+          Host deploy-server
+            HostName ${DEPLOY_HOST}
+            User ${DEPLOY_USER}
+            IdentityFile ${SSH_DIR}/key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ${SSH_DIR}/known_hosts
+            BatchMode yes
+          EOF
+          chmod 600 "$SSH_DIR/config"
+
+          mkdir -p "$SSH_DIR/env"
+          printf '%s' "$BACKEND_ENV_FILE" > "$SSH_DIR/env/backend.env"
+          printf '%s' "$POSTGRES_ENV_FILE" > "$SSH_DIR/env/postgres.env"
+          chmod 600 "$SSH_DIR/env/"*
+
+          ssh -F "$SSH_DIR/config" deploy-server \
+            'mkdir -p "$HOME/backend-app/backend"'
+
+          rsync -az --delete \
+            --exclude='/.git/' \
+            --exclude='/backend/.env' \
+            --exclude='/postgres.env' \
+            -e "ssh -F $SSH_DIR/config" \
+            ./ "deploy-server:${REMOTE_DIR}/"
+
+          ssh -F "$SSH_DIR/config" deploy-server \
+            'umask 077; cat > "$HOME/backend-app/backend/.env"; chmod 600 "$HOME/backend-app/backend/.env"' \
+            < "$SSH_DIR/env/backend.env"
+
+          ssh -F "$SSH_DIR/config" deploy-server \
+            'umask 077; cat > "$HOME/backend-app/postgres.env"; chmod 600 "$HOME/backend-app/postgres.env"' \
+            < "$SSH_DIR/env/postgres.env"
+
+          ssh -F "$SSH_DIR/config" deploy-server \
+            bash -s -- "$REMOTE_DIR" "$COMPOSE_FILE" <<'REMOTE'
+          set -euo pipefail
+          cd "$HOME/$1"
+          docker compose -f "$2" build
+          docker compose -f "$2" up -d
+          REMOTE
