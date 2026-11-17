@@ -26,3 +26,9 @@ test-results/
 # Системные файлы
 .DS_Store
 Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.env
