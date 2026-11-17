@@ -18,7 +18,7 @@ class CardCreateData(BaseModel):
     is_positive_result_3: bool
     result_old_3: str
     result_new_3: str
-    event: str
+    events: list[str]
     category_id: uuid.UUID
     status: CardStatus
     visibility: CardVisibility
@@ -31,3 +31,6 @@ class CardGetData(BaseModel):
     category: Optional[uuid.UUID]
     limit: int
     offset: int
+
+class CardExportData(BaseModel):
+    id: uuid.UUID

@@ -337,9 +337,13 @@ async def notifications(
     if result is None:
         return []
 
+    q = (select(Notification)
+        .where(Notification.user_id == user_id))
+    all_notifications = session.exec(q).all()
+
     result = NotificationsGetResult(
-        result=len(result),
-        unread_count=len(list(filter(lambda x: not x.read, result))),
+        result=len(all_notifications),
+        unread_count=len(list(filter(lambda x: not x.read, all_notifications))),
         data=list(map(dict, result))
     )
 

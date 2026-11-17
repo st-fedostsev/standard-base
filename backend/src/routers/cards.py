@@ -14,6 +14,8 @@ from typing import Optional
 import uuid
 import asyncio
 import base64
+from urllib.parse import quote
+
 
 router = APIRouter(
     prefix='/cards',
@@ -57,6 +59,7 @@ async def create(
     q = select(User).where(User.id == user_id)
     user = session.exec(q).first()
     if user is None:
+        response.status_code = status.HTTP_403_FORBIDDEN
         return Message(msg='Пользователь не найден')
 
     if user.role not in [UserRole.author, UserRole.admin]:
@@ -65,11 +68,13 @@ async def create(
 
     try:
         card_create_data = CardCreateData.model_validate_json(data)
-    except:
+    except Exception as e:
+        print(e)
         response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         return Message(msg='Данные указаны неверно')
     
     photo_data = await photo.read() if photo is not None else None
+    print(card_create_data.model_dump())
     card = Card(
         **card_create_data.model_dump(),
         author_id=user.id,
@@ -121,3 +126,42 @@ async def categories(response: Response, session: Session = Depends(get_session)
     q = select(CardCategory)
     result = session.exec(q).all()
     return list(map(dict, result))
+
+@router.post(
+    '/export',
+    summary='Экспортировать карточку как слайд'
+)
+async def export(   
+    response: Response,
+    card_export_data: CardExportData,
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security)
+):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    user_id = uuid.UUID(credentials['id'])
+    q = select(User).where(User.id == user_id)
+    user = session.exec(q).first()
+    if user is None:
+        response.status_code = status.HTTP_403_FORBIDDEN
+        return Message(msg='Пользователь не найден')
+
+    q = select(Card).where(Card.id == card_export_data.id)
+    card = session.exec(q).first()
+    if card is None:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return Message(msg='Карточка не найдена')
+    
+    if (card.visibility == CardVisibility.private) and (user.id != card.author_id) and (user.role != UserRole.admin):
+        response.status_code = status.HTTP_403_FORBIDDEN
+        return Message(msg='Недостаточно прав')
+    
+    result = await card.to_pptx()
+    return Response(
+        content=result,
+        media_type='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        headers={
+            'Content-Disposition': f"attachment; filename*=UTF-8''{quote(card.title)}.pptx"
+        }
+    )
