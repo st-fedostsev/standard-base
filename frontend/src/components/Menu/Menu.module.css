@@ -1,0 +1,152 @@
+/* Общая раскладка: меню + содержимое страницы. */
+.layout {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/*
+ * Место под меню в потоке страницы.
+ * Sticky остаётся у верхнего края при вертикальной прокрутке.
+ */
+.sticky {
+  z-index: 1200;
+}
+
+/* Внешняя оболочка меню. Её ширина управляется из Menu.tsx. */
+.menu {
+  height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #f5f5f5;
+  transition: width 200ms ease;
+}
+
+@supports (height: 100dvh) {
+  .menu {
+    height: 100dvh;
+  }
+}
+
+/* Внутреннее содержимое всегда полной ширины — иконки не прыгают. */
+.content {
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* MainMenuHeader */
+.header {
+  display: flex;
+  align-items: center;
+  height: 68px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.logoColumn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #1976d2;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.title {
+  min-width: 0;
+  padding-right: 8px;
+  opacity: 0;
+  line-height: 1.3;
+  font-weight: 600;
+  transition: opacity 100ms ease;
+}
+
+.titleVisible {
+  opacity: 1;
+  transition: opacity 200ms ease 80ms;
+}
+
+/* Аналог .menuDevider из примера Контура. */
+.menuDivider {
+  height: 1px;
+  flex-shrink: 0;
+  border: none;
+  margin: 4px 8px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Аналоги SideMenu.Body и SideMenu.Footer. */
+.body {
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.footer {
+  padding: 8px 8px 16px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.menu .item:hover {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+/* Контент может сжиматься рядом с меню. */
+.main {
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 32px 32px 16px;
+}
+
+/* Аналог smallMenuBackground из примера. */
+.smallMenuBackground {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  box-sizing: border-box;
+  background: #fff;
+  z-index: 1100;
+}
+
+@media screen and (min-width: 992px) {
+  .smallMenuBackground {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 991.95px) {
+  .main {
+    padding: 84px 16px 16px;
+  }
+}
+
+/* Меньше анимаций, если это настроено пользователем. */
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+  .title,
+  .titleVisible {
+    transition: none;
+  }
+}
