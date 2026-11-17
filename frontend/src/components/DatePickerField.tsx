@@ -35,7 +35,7 @@ type DatePickerFieldProps = {
   /** Самая поздняя доступная дата в календаре, YYYY-MM-DD. */
   max?: string;
   error?: boolean;
-  width?: number;
+  width?: number | string;
   dataTid?: string;
 };
 
@@ -98,7 +98,7 @@ export function DatePickerField({
   }).format(view);
 
   return (
-    <Box data-tid={dataTid} sx={{ width }}>
+    <Box data-tid={dataTid} sx={{ width, maxWidth: '100%', minWidth: 0 }}>
       <TextField
         label={label}
         size='small'

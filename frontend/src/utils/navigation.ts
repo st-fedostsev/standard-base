@@ -1,8 +1,8 @@
+import FolderOpenOutlined from '@mui/icons-material/FolderOpenOutlined';
 import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
+import HelpOutlined from '@mui/icons-material/HelpOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
-import LibraryBooksOutlined from '@mui/icons-material/LibraryBooksOutlined';
-import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
-import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
+import PersonOutlined from '@mui/icons-material/PersonOutlined';
 
 import type { NavItem } from '@/utils/types/navigation';
 
@@ -11,9 +11,9 @@ import { ROLES } from './types/roles';
 export const NAV_ITEMS: NavItem[] = [
   {
     id: 'catalog',
-    label: 'Каталог',
+    label: 'Реестр решений',
     to: '/',
-    icon: LibraryBooksOutlined,
+    icon: FolderOpenOutlined,
     roles: Object.values(ROLES),
   },
   {
@@ -27,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'users',
     label: 'Пользователи',
     to: '/users',
-    icon: PeopleOutlined,
+    icon: PersonOutlined,
     roles: [ROLES.Admin],
   },
   {
@@ -45,6 +45,6 @@ export const FOOTER_ITEMS: NavItem[] = [
     id: 'docs',
     label: 'Документация',
     href: '#',
-    icon: MenuBookOutlined,
+    icon: HelpOutlined,
   },
 ];

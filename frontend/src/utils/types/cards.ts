@@ -55,8 +55,12 @@ export type CardRow = {
 export type CardFilters = {
   search: string;
   status: string[];
-  category: string;
-  authorId: string;
+
+  /** Пустой массив — все категории. */
+  category: string[];
+
+  /** Пустой массив — все авторы. */
+  authorIds: string[];
 
   /** Период создания карточки. */
   created: DateRangeValue;
@@ -65,8 +69,8 @@ export type CardFilters = {
 export const DEFAULT_CARD_FILTERS: CardFilters = {
   search: '',
   status: [],
-  category: 'all',
-  authorId: 'all',
+  category: [],
+  authorIds: [],
   created: {
     from: '',
     to: '',

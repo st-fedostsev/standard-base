@@ -1,10 +1,14 @@
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import {
   Badge,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   IconButton,
   List,
@@ -12,48 +16,60 @@ import {
   ListItemIcon,
   ListItemText,
   Popover,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import CheckOutlined from '@mui/icons-material/CheckOutlined';
 import Close from '@mui/icons-material/Close';
+import InfoOutlined from '@mui/icons-material/InfoOutlined';
 import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined';
 
 import { EmptyState } from '@/components/EmptyState';
+import { Loader } from '@/components/Loader/Loader';
+import { useToast } from '@/components/Toast';
 
+import { useAuth } from '@/utils/hooks/useAuth';
+import { useNotifications } from '@/utils/hooks/useNotifications';
 import type { NotificationItem } from '@/utils/types/notifications';
 
 import { menuItemSx, railItemSx, revealSx } from './menuItemSx';
 
 type NotificationMenuItemProps = {
-  notifications: readonly NotificationItem[];
-  unreadCount: number;
-
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
-
-  onMarkRead: (id: string) => void;
-  onHide: (id: string) => void;
-
-  /** Промежуточный режим меню с иконками. */
   rail: boolean;
-
-  /** Показывать подпись пункта. */
   expanded: boolean;
-
   isMobile: boolean;
   sidebarWidth: number;
 };
 
 const PANEL_WIDTH = 360;
+const NOTIFICATION_ROW_HEIGHT = 144;
+const MAX_PAGE_SIZE = 20;
+
+/** Переход разрешён только внутри приложения. */
+function getInternalPath(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value, window.location.origin);
+
+    if (url.origin !== window.location.origin) {
+      return null;
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
 
 export function NotificationMenuItem({
-  notifications,
-  unreadCount,
   open,
   onOpen,
   onClose,
-  onMarkRead,
-  onHide,
   rail,
   expanded,
   isMobile,
@@ -61,28 +77,128 @@ export function NotificationMenuItem({
 }: NotificationMenuItemProps) {
   const navigate = useNavigate();
   const panelId = useId();
+  const { showToast } = useToast();
 
-  // На мобильном экране панель открывается от левого края окна.
+  const { user, isPending: isAuthPending, isError: isAuthError } = useAuth();
+
+  const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
+  const [details, setDetails] = useState<NotificationItem | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number | null>(null);
+
+  const {
+    notifications,
+    unreadCount,
+    totalPages,
+    hasPreviousPage,
+    hasNextPage,
+    nextPage,
+    previousPage,
+    isLoading,
+    isError,
+    refetch,
+    markRead,
+    isMarkingRead,
+  } = useNotifications(pageSize, page, open);
+
+  // Измеряем высоту области списка и показываем только целое число строк.
+  useEffect(() => {
+    if (!open || !listElement) return;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const measure = () => {
+      const availableHeight = listElement.clientHeight;
+
+      // Popover ещё может не завершить первоначальный layout.
+      if (availableHeight <= 0) return;
+
+      const nextSize = Math.min(
+        MAX_PAGE_SIZE,
+        Math.floor(availableHeight / NOTIFICATION_ROW_HEIGHT)
+      );
+
+      setPageSize((previous) => (previous === nextSize ? previous : nextSize));
+    };
+
+    const scheduleMeasure = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+
+      timer = setTimeout(measure, 100);
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', scheduleMeasure);
+
+      return () => {
+        window.removeEventListener('resize', scheduleMeasure);
+
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+      };
+    }
+
+    const observer = new ResizeObserver(scheduleMeasure);
+    observer.observe(listElement);
+
+    return () => {
+      observer.disconnect();
+
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    };
+  }, [open, listElement]);
+
+  // При изменении размера страницы начинаем с первой страницы.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(0);
+  }, [pageSize]);
+
   const panelLeft = isMobile ? 0 : sidebarWidth;
+
+  const buttonLabel =
+    unreadCount === undefined
+      ? 'Уведомления'
+      : unreadCount > 0
+        ? `Уведомления, непрочитанных: ${unreadCount}`
+        : 'Уведомления, нет непрочитанных';
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await markRead(id);
+    } catch {
+      showToast({
+        use: 'error',
+        title: 'Не удалось отметить уведомление прочитанным',
+        message: 'Попробуйте ещё раз.',
+      });
+    }
+  };
+
+  const visibleNotifications =
+    pageSize === null ? [] : notifications.slice(0, pageSize);
 
   return (
     <>
       <ListItemButton
         sx={rail ? railItemSx : menuItemSx}
         selected={open}
-        aria-label={
-          unreadCount > 0
-            ? `Уведомления, непрочитанных: ${unreadCount}`
-            : 'Уведомления'
-        }
+        aria-label={buttonLabel}
         aria-haspopup='dialog'
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        onClick={onOpen}
+        onClick={open ? onClose : onOpen}
       >
         <ListItemIcon>
           <Badge
-            badgeContent={unreadCount}
+            badgeContent={unreadCount ?? 0}
             color='error'
             max={99}
             sx={{
@@ -96,7 +212,7 @@ export function NotificationMenuItem({
               },
             }}
           >
-            <NotificationsNoneOutlined sx={{ fontSize: 24 }} />
+            <NotificationsNoneOutlined />
           </Badge>
         </ListItemIcon>
 
@@ -106,6 +222,7 @@ export function NotificationMenuItem({
       <Popover
         open={open}
         onClose={onClose}
+        disableScrollLock
         anchorReference='anchorPosition'
         anchorPosition={{ top: 0, left: panelLeft }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
@@ -123,21 +240,27 @@ export function NotificationMenuItem({
               maxWidth: `calc(100vw - ${panelLeft}px)`,
               height: '100dvh',
               maxHeight: '100dvh',
+              overflow: 'hidden',
               borderRadius: 0,
             },
           },
         }}
       >
+        {/* Заголовок панели */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexShrink: 0,
+            gap: 1,
             px: 2,
             py: 1,
           }}
         >
-          <Typography variant='h6'>Уведомления</Typography>
+          <Typography variant='h6' noWrap>
+            Уведомления
+          </Typography>
 
           <IconButton aria-label='Закрыть уведомления' onClick={onClose}>
             <Close />
@@ -146,88 +269,301 @@ export function NotificationMenuItem({
 
         <Divider />
 
-        <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto' }}>
-          {notifications.length === 0 ? (
+        {/* Область списка не прокручивается: показываем только влезающие строки. */}
+        <Box
+          ref={setListElement}
+          sx={{
+            flex: '1 1 0',
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {isAuthPending ? (
+            <Loader label='Проверяем авторизацию...' />
+          ) : isAuthError ? (
             <EmptyState
               icon={NotificationsNoneOutlined}
-              description='У вас пока нет уведомлений'
+              description='Не удалось проверить авторизацию.'
+            />
+          ) : !user ? (
+            <EmptyState
+              icon={NotificationsNoneOutlined}
+              description='Войдите, чтобы посмотреть уведомления.'
+            />
+          ) : !user.id ? (
+            <EmptyState
+              icon={NotificationsNoneOutlined}
+              description='Не удалось определить пользователя.'
+            />
+          ) : pageSize === null ? (
+            <Loader label='Подготавливаем список...' />
+          ) : pageSize === 0 ? (
+            <Typography variant='body2' sx={{ p: 2, color: 'text.secondary' }}>
+              Недостаточно места для отображения уведомлений.
+            </Typography>
+          ) : isLoading ? (
+            <Loader label='Загружаем уведомления...' />
+          ) : isError && notifications.length === 0 ? (
+            <EmptyState
+              icon={NotificationsNoneOutlined}
+              description='Не удалось загрузить уведомления.'
+              action={
+                <Button variant='text' onClick={() => void refetch()}>
+                  Повторить
+                </Button>
+              }
+            />
+          ) : notifications.length === 0 ? (
+            <EmptyState
+              icon={NotificationsNoneOutlined}
+              description={
+                page === 0
+                  ? 'У вас пока нет уведомлений.'
+                  : 'На этой странице нет уведомлений.'
+              }
             />
           ) : (
-            <List disablePadding>
-              {notifications.map((notification) => (
-                <Box
-                  component='li'
-                  key={notification.id}
-                  sx={{
-                    listStyle: 'none',
-                    px: 2,
-                    py: 1.5,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: notification.isRead
-                      ? 'transparent'
-                      : 'action.hover',
-                  }}
-                >
-                  <Typography
-                    variant='subtitle2'
-                    sx={{ fontWeight: notification.isRead ? 400 : 600 }}
-                  >
-                    {notification.title}
-                  </Typography>
+            <List
+              disablePadding
+              sx={{
+                height: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              {visibleNotifications.map((notification) => {
+                const actionPath = getInternalPath(notification.actionUrl);
 
-                  {notification.description && (
-                    <Typography
-                      variant='body2'
-                      sx={{ color: 'text.secondary', mt: 0.5 }}
-                    >
-                      {notification.description}
-                    </Typography>
-                  )}
-
+                return (
                   <Box
+                    component='li'
+                    key={notification.id}
                     sx={{
                       display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 1,
-                      mt: 1,
+                      flexDirection: 'column',
+                      boxSizing: 'border-box',
+                      height: NOTIFICATION_ROW_HEIGHT,
+                      maxHeight: NOTIFICATION_ROW_HEIGHT,
+                      overflow: 'hidden',
+                      listStyle: 'none',
+                      px: 2,
+                      py: 1.5,
+                      borderBottom: '1px solid',
+                      borderBottomColor: 'divider',
+                      borderLeft: '3px solid',
+                      borderLeftColor: notification.read
+                        ? 'transparent'
+                        : 'primary.main',
+                      bgcolor: (theme) =>
+                        notification.read
+                          ? theme.palette.background.paper
+                          : alpha(theme.palette.primary.main, 0.08),
                     }}
                   >
-                    {notification.type === 'action' && (
-                      <Button
-                        size='small'
-                        variant='outlined'
-                        onClick={() => {
-                          onClose();
-                          navigate(notification.action.to);
+                    {/* Заголовок и состояние непрочитанного */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      <Typography
+                        variant='subtitle2'
+                        noWrap
+                        sx={{
+                          flexGrow: 1,
+                          minWidth: 0,
+                          fontWeight: notification.read ? 400 : 700,
                         }}
                       >
-                        {notification.action.label}
-                      </Button>
-                    )}
+                        {notification.title}
+                      </Typography>
 
-                    {!notification.isRead && (
-                      <Button
-                        size='small'
-                        onClick={() => onMarkRead(notification.id)}
+                      {!notification.read && (
+                        <Typography
+                          variant='caption'
+                          sx={{
+                            flexShrink: 0,
+                            color: 'primary.main',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Новое
+                        </Typography>
+                      )}
+                    </Box>
+
+                    {notification.description && (
+                      <Typography
+                        variant='body2'
+                        sx={{
+                          mt: 0.5,
+                          color: 'text.secondary',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflowWrap: 'anywhere',
+                        }}
                       >
-                        Прочитано
-                      </Button>
+                        {notification.description}
+                      </Typography>
                     )}
 
-                    <Button
-                      size='small'
-                      onClick={() => onHide(notification.id)}
+                    {/* Действия внизу строки */}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        mt: 'auto',
+                        minWidth: 0,
+                      }}
                     >
-                      Скрыть
-                    </Button>
+                      <Tooltip title='Подробнее'>
+                        <IconButton
+                          size='small'
+                          aria-label={`Подробнее: ${notification.title}`}
+                          onClick={() => setDetails(notification)}
+                        >
+                          <InfoOutlined fontSize='small' />
+                        </IconButton>
+                      </Tooltip>
+
+                      {notification.actionLabel && actionPath && (
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          onClick={() => {
+                            onClose();
+                            navigate(actionPath);
+                          }}
+                          sx={{ minWidth: 0, maxWidth: '100%' }}
+                        >
+                          <Typography component='span' variant='button' noWrap>
+                            {notification.actionLabel}
+                          </Typography>
+                        </Button>
+                      )}
+
+                      {!notification.read && (
+                        <Tooltip title='Отметить прочитанным'>
+                          <span>
+                            <IconButton
+                              size='small'
+                              aria-label={`Отметить прочитанным: ${notification.title}`}
+                              disabled={isMarkingRead}
+                              onClick={() => {
+                                void handleMarkRead(notification.id);
+                              }}
+                            >
+                              <CheckOutlined fontSize='small' />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
             </List>
           )}
         </Box>
+
+        {/* Пагинация */}
+        {user?.id && pageSize !== null && pageSize > 0 && (
+          <>
+            <Divider />
+
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexShrink: 0,
+                gap: 1,
+                px: 2,
+                py: 1,
+              }}
+            >
+              <Button
+                size='small'
+                onClick={previousPage}
+                disabled={!hasPreviousPage || isLoading}
+              >
+                Назад
+              </Button>
+
+              <Typography
+                variant='body2'
+                sx={{
+                  color: 'text.secondary',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {totalPages === undefined
+                  ? `Страница ${page + 1}`
+                  : `${page + 1} / ${totalPages}`}
+              </Typography>
+
+              <Button
+                size='small'
+                onClick={nextPage}
+                disabled={!hasNextPage || isLoading}
+              >
+                Далее
+              </Button>
+            </Box>
+          </>
+        )}
       </Popover>
+
+      {/* Полный текст уведомления */}
+      <Dialog
+        open={details !== null}
+        onClose={() => setDetails(null)}
+        fullWidth
+        maxWidth='xs'
+        aria-labelledby={`${panelId}-details-title`}
+      >
+        <DialogTitle id={`${panelId}-details-title`}>
+          {details?.title}
+        </DialogTitle>
+
+        {details?.description && (
+          <DialogContent dividers>
+            <Typography
+              sx={{
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {details.description}
+            </Typography>
+          </DialogContent>
+        )}
+
+        <DialogActions sx={{ flexWrap: 'wrap' }}>
+          {details?.actionLabel && getInternalPath(details.actionUrl) && (
+            <Button
+              onClick={() => {
+                const path = getInternalPath(details.actionUrl);
+
+                if (!path) return;
+
+                setDetails(null);
+                onClose();
+                navigate(path);
+              }}
+            >
+              {details.actionLabel}
+            </Button>
+          )}
+
+          <Button onClick={() => setDetails(null)}>Закрыть</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

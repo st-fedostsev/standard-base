@@ -1,0 +1,35 @@
+/*
+ * Акцентный цвет темы MUI, если CSS-переменные включены.
+ * Иначе используем текущий цвет проекта.
+ */
+.active {
+  --filter-accent: var(--mui-palette-primary-main, #1976d2);
+}
+
+/* Полужирное значение: текст поиска, дата или выбранные пункты. */
+.active :global(.MuiInputBase-input),
+.active :global(.MuiSelect-select) {
+  font-weight: 600;
+}
+
+/* Рамка, кроме поля с ошибкой или отключённого поля. */
+.active
+  :global(.MuiOutlinedInput-root:not(.Mui-error):not(.Mui-disabled))
+  :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: var(--filter-accent);
+}
+
+/* Рамка сохраняет акцентный цвет при наведении. */
+.active
+  :global(.MuiOutlinedInput-root:not(.Mui-error):not(.Mui-disabled):hover)
+  :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: var(--filter-accent);
+}
+
+/* При фокусе рамка становится немного толще. */
+.active
+  :global(.MuiOutlinedInput-root.Mui-focused:not(.Mui-error):not(.Mui-disabled))
+  :global(.MuiOutlinedInput-notchedOutline) {
+  border-color: var(--filter-accent);
+  border-width: 2px;
+}

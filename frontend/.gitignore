@@ -1,21 +1,29 @@
-# Logs
-logs
+# Зависимости
+node_modules/
+
+# Сборка
+dist/
+dist-ssr/
+
+# Локальные env-файлы с секретами
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Логи
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Кеши и результаты тестов
+.vite/
+coverage/
+playwright-report/
+test-results/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Системные файлы
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,3 +31,4 @@ dist-ssr
 *.sln
 *.sw?
 *.env
+Thumbs.db
