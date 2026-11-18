@@ -6,19 +6,16 @@ import {
   useSyncExternalStore,
 } from 'react';
 
-import { useQueryClient } from '@tanstack/react-query';
-
+import { useAuth } from '@/utils/hooks/useAuth';
 import {
-  Alert,
   Box,
-  Button,
   CircularProgress,
   Portal,
   Typography,
   useTheme,
 } from '@mui/material';
-
-import { useAuth } from '@/utils/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+import { AppErrorScreen } from '../AppErrorScreen';
 
 const HIDE_DELAY_MS = 120;
 
@@ -112,40 +109,17 @@ export function IGlobalLoader() {
   useLockPageScroll(loaderVisible);
 
   if (isAuthError) {
-    return (
-      <Portal>
-        <Box
-          role='alert'
-          sx={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: theme.zIndex.modal + 10,
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: 'background.paper',
-            p: 3,
+    if (isAuthError) {
+      return (
+        <AppErrorScreen
+          message='Не удалось загрузить приложение. Проверьте соединение и попробуйте снова.'
+          onRetry={() => {
+            void retryAuth();
           }}
-        >
-          <Box sx={{ width: '100%', maxWidth: 400 }}>
-            <Alert
-              severity='error'
-              action={
-                <Button
-                  color='inherit'
-                  size='small'
-                  onClick={() => void retryAuth()}
-                >
-                  Повторить
-                </Button>
-              }
-            >
-              Не удалось загрузить приложение. Проверьте соединение и попробуйте
-              снова.
-            </Alert>
-          </Box>
-        </Box>
-      </Portal>
-    );
+          retrying={isAuthPending}
+        />
+      );
+    }
   }
 
   if (!loaderVisible) return null;
