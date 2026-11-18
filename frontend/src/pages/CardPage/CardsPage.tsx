@@ -13,15 +13,15 @@ import { FilterBar } from '@/components/FilterBar';
 import { MassActionsPanel } from '@/components/MassActionsPanel';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { api } from '@/utils/api';
-import type { GetCardsRequest } from '@/utils/types/cards';
 import {
-  CARD_CATEGORY_OPTIONS,
   CARD_STATUS_LABELS,
   CARD_STATUS_OPTIONS,
   DEFAULT_CARD_FILTERS,
   type CardAuthor,
+  type CardCategory,
   type CardFilters,
   type CardRow,
+  type GetCardsRequest,
 } from '@/utils/types/cards';
 import { isFiltered, type FilterDef } from '@/utils/types/filters';
 import { ROLES } from '@/utils/types/roles';
@@ -179,6 +179,19 @@ export function CardsPage() {
     offset: 0,
   };
 
+  const categoriesQuery = useQuery<CardCategory[]>({
+    queryKey: ['card-categories'],
+    queryFn: ({ signal }) => api.Cards.getCategories<CardCategory[]>(signal),
+    meta: { globalLoader: true },
+  });
+
+  const categories = categoriesQuery.data ?? [];
+
+  const categoryOptions = categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }));
+
   const cardsQuery = useQuery({
     queryKey: ['cards', request],
     queryFn: async () => {
@@ -228,6 +241,7 @@ export function CardsPage() {
     );
   };
 
+  // TODO: убрать фильтры в компоненты
   const filterDefs: FilterDef[] = [
     {
       type: 'dateRange',
@@ -251,7 +265,7 @@ export function CardsPage() {
       type: 'multiselect',
       key: 'category',
       label: 'Категория',
-      options: CARD_CATEGORY_OPTIONS,
+      options: categoryOptions,
       width: 200,
     },
     {

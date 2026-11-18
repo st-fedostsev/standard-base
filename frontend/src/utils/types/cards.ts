@@ -1,6 +1,6 @@
 import type { DateRangeValue, FilterOption } from '@/utils/types/filters';
 
-/** Статусы карточки. Набор из раздела модерации брифа, подтвердить на созвоне. */
+/** Статусы карточки, используемые API. */
 export const CARD_STATUS_LABELS = {
   draft: 'Черновик',
   review: 'На согласовании',
@@ -11,26 +11,25 @@ export const CARD_STATUS_LABELS = {
 
 export type CardStatus = keyof typeof CARD_STATUS_LABELS;
 
-/** Категории. Список — моё предположение, справочник пока не согласован. */
-export const CARD_CATEGORIES = [
-  'Процессы',
-  'Инструменты',
-  'Показатели',
-  'Обучение',
-] as const;
+/** Вариант категории, возвращаемый GET /cards/categories. */
+export type CardCategory = {
+  id: string;
+  name: string;
+};
 
-export type CardCategory = (typeof CARD_CATEGORIES)[number];
+/** Преобразовать ответ API категорий в варианты для FilterBar. */
+export function toCardCategoryOptions(
+  categories: CardCategory[]
+): FilterOption[] {
+  return categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }));
+}
 
 export const CARD_STATUS_OPTIONS: FilterOption[] = Object.entries(
   CARD_STATUS_LABELS
 ).map(([value, label]) => ({ value, label }));
-
-export const CARD_CATEGORY_OPTIONS: FilterOption[] = CARD_CATEGORIES.map(
-  (c) => ({
-    value: c,
-    label: c,
-  })
-);
 
 export type CardAuthor = {
   id: string;
@@ -39,16 +38,23 @@ export type CardAuthor = {
 };
 
 export const CARD_VISIBILITIES = ['public', 'protected', 'private'] as const;
+
 export type CardVisibility = (typeof CARD_VISIBILITIES)[number];
 
 export type CardRow = {
   id: string;
   title: string;
-  category: CardCategory;
+
+  /** Название категории из ответа GET /cards/get. */
+  category: string;
+
   author: CardAuthor;
   status: CardStatus;
+
+  /** Имя visibily сохранено как в контракте API. */
   visibily: CardVisibility;
-  /** Локальное время: YYYY-MM-DDTHH:mm:ss. */
+
+  /** Дата создания карточки. */
   createAt: string;
 };
 
@@ -56,13 +62,13 @@ export type CardFilters = {
   search: string;
   status: string[];
 
-  /** Пустой массив — все категории. */
+  /** ID выбранных категорий; пустой массив означает «все». */
   category: string[];
 
-  /** Пустой массив — все авторы. */
+  /** GUID выбранных авторов; пустой массив означает «все». */
   authorIds: string[];
 
-  /** Период создания карточки. */
+  /** Диапазон даты создания карточки. */
   created: DateRangeValue;
 };
 
