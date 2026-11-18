@@ -1,4 +1,4 @@
-import { CardsApi } from '@/utils/api/CardsApi';
+import { CardsApi } from '@/utils/api/cardsApi';
 import { AuthApi } from '@/utils/api/authApi';
 import { createHttpClient } from '@/utils/api/client';
 import type { AxiosInstance } from 'axios';
