@@ -76,3 +76,48 @@ export const DEFAULT_CARD_FILTERS: CardFilters = {
     to: '',
   },
 };
+
+export type GetCardsRequest = {
+  created_from?: string | null;
+  created_to?: string | null;
+  title?: string | null;
+  status?: string | null;
+  category?: string | null;
+  limit: number;
+  offset: number;
+};
+
+export type CreateCardStatus =
+  'draft' | 'review' | 'published' | 'returned' | 'archived';
+
+export type CreateCardVisibility = 'public' | 'protected' | 'private';
+
+export type CreateCardRequest = {
+  title: string;
+  branch: string;
+  pilot_stream: string;
+  main_result: string;
+
+  is_positive_result_1: boolean;
+  result_old_1: string;
+  result_new_1: string;
+
+  is_positive_result_2: boolean;
+  result_old_2: string;
+  result_new_2: string;
+
+  is_positive_result_3: boolean;
+  result_old_3: string;
+  result_new_3: string;
+
+  event: string;
+  category_id: string;
+  status: CreateCardStatus;
+
+  // Сохраняем написание поля из контракта бэкенда: visbility.
+  visbility: CreateCardVisibility;
+};
+
+export type CreateCardResponse = {
+  msg: string;
+};
