@@ -10,6 +10,7 @@ import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
 import SendOutlined from '@mui/icons-material/SendOutlined';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 
+import { AddCardModal } from '@/components/Modals/AddCardModal';
 import {
   CellLines,
   DataTable,
@@ -116,6 +117,7 @@ export function CardsPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [addCardOpen, setAddCardOpen] = useState(false);
 
   const {
     data: cards = NO_CARDS,
@@ -225,7 +227,7 @@ export function CardsPage() {
           <Button
             variant='outlined'
             startIcon={<AddIcon />}
-            onClick={() => navigate('/cards/new')}
+            onClick={() => setAddCardOpen(true)}
           >
             Создать материал
           </Button>
@@ -243,7 +245,7 @@ export function CardsPage() {
           <Button
             variant='contained'
             startIcon={<AddIcon />}
-            onClick={() => navigate('/cards/new')}
+            onClick={() => setAddCardOpen(true)}
           >
             Создать материал
           </Button>
@@ -302,6 +304,13 @@ export function CardsPage() {
           isError ? 'Не удалось загрузить данные. Попробуйте позже' : undefined
         }
         empty={emptyState}
+      />
+
+      <AddCardModal
+        open={addCardOpen}
+        onClose={() => setAddCardOpen(false)}
+        // Пока без сохранения: после проверки формы просто закрываем окно
+        onSubmit={() => setAddCardOpen(false)}
       />
     </PageLayout>
   );
