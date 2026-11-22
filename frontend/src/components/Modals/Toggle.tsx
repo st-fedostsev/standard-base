@@ -1,26 +1,26 @@
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
-export type SwitcherOption<T extends string> = {
+export type ToggleOption<T extends string> = {
   value: T;
   label: string;
 };
 
-type SwitcherProps<T extends string> = {
+type ToggleProps<T extends string> = {
   value: T;
-  options: readonly SwitcherOption<T>[];
+  options: readonly ToggleOption<T>[];
   onChange: (value: T) => void;
   ariaLabel: string;
   disabled?: boolean;
 };
 
-/** Кнопок переключателей. */
-export function Switcher<T extends string>({
+/** Кнопки переключателей. */
+export function Toggle<T extends string>({
   value,
   options,
   onChange,
   ariaLabel,
   disabled = false,
-}: SwitcherProps<T>) {
+}: ToggleProps<T>) {
   return (
     <ToggleButtonGroup
       exclusive

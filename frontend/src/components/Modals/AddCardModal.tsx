@@ -1,23 +1,16 @@
 import { useState, type FormEvent } from 'react';
 
-import {
-  Box,
-  Button,
-  Collapse,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Collapse, Stack, Typography } from '@mui/material';
 
 import { AppForm } from '@/components/AppForm';
+import { FieldRow } from '@/components/FieldRow';
+import { FileUpload } from '@/components/FileUpload';
 import { Input } from '@/components/Input';
-import { FileUpload } from '@/components/Modals/FileUpload';
+import { ModalLayout } from '@/components/Modals/ModalLayout';
 import { SwitchField } from '@/components/Modals/SwitchField';
-import { Switcher, type SwitcherOption } from '@/components/Modals/Switcher';
-import { FieldRow } from '@/components/RemoveComponents';
+import { Toggle, type ToggleOption } from '@/components/Modals/Toggle';
+
+import { ALL_FILE_TYPES } from '@/utils/types/fileTypes';
 
 type Visibility = 'public' | 'protected' | 'private';
 
@@ -55,7 +48,7 @@ type FormErrors = {
   metrics?: MetricErrors[];
 };
 
-const VISIBILITY_OPTIONS: SwitcherOption<Visibility>[] = [
+const VISIBILITY_OPTIONS: ToggleOption<Visibility>[] = [
   { value: 'public', label: 'ПУБЛИЧНАЯ' },
   { value: 'protected', label: 'ЗАЩИЩЁННАЯ' },
   { value: 'private', label: 'ПРИВАТНАЯ' },
@@ -278,173 +271,165 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
   ).length;
 
   return (
-    <Dialog
+    <ModalLayout
       open={open}
       onClose={handleClose}
-      fullWidth
       maxWidth='md'
-      aria-labelledby='add-card-title'
+      titleId='add-card-title'
+      title={
+        <>
+          <Box
+            component='span'
+            sx={{ fontWeight: 600, textTransform: 'uppercase' }}
+          >
+            Создание карточки
+          </Box>
+
+          <Toggle
+            value={values.visibility}
+            options={VISIBILITY_OPTIONS}
+            onChange={(visibility) => updateField('visibility', visibility)}
+            ariaLabel='Видимость карточки'
+          />
+        </>
+      }
+      actions={
+        <>
+          <Button variant='text' onClick={handleClose}>
+            Отмена
+          </Button>
+
+          <Button type='button' variant='contained' onClick={submitForm}>
+            Отправить на модерацию
+          </Button>
+        </>
+      }
     >
-      <DialogTitle
-        id='add-card-title'
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'nowrap',
-          gap: 2,
-        }}
-      >
-        <Box
-          component='span'
-          sx={{ fontWeight: 600, textTransform: 'uppercase' }}
-        >
-          Создание карточки
-        </Box>
-
-        <Switcher
-          value={values.visibility}
-          options={VISIBILITY_OPTIONS}
-          onChange={(visibility) => updateField('visibility', visibility)}
-          ariaLabel='Видимость карточки'
+      <AppForm onSubmit={handleSubmit}>
+        <Input
+          label='Заголовок'
+          value={values.title}
+          onChange={(title) => updateField('title', title)}
+          errorText={errors.title}
+          required
+          autoFocus
         />
-      </DialogTitle>
 
-      <DialogContent>
-        <AppForm onSubmit={handleSubmit}>
+        <FieldRow>
           <Input
-            label='Заголовок'
-            value={values.title}
-            onChange={(title) => updateField('title', title)}
-            errorText={errors.title}
-            required
-            autoFocus
-          />
-
-          <FieldRow>
-            <Input
-              label='Пилотный поток'
-              value={values.personalFlow}
-              onChange={(personalFlow) =>
-                updateField('personalFlow', personalFlow)
-              }
-              errorText={errors.personalFlow}
-              required
-            />
-            <Input
-              label='Отрасль'
-              value={values.industry}
-              onChange={(industry) => updateField('industry', industry)}
-              errorText={errors.industry}
-              required
-            />
-          </FieldRow>
-
-          <Input
-            label='Основной результат'
-            value={values.mainResult}
-            onChange={(mainResult) => updateField('mainResult', mainResult)}
-            errorText={errors.mainResult}
-            multiline
-            minRows={2}
-            maxRows={6}
+            label='Пилотный поток'
+            value={values.personalFlow}
+            onChange={(personalFlow) =>
+              updateField('personalFlow', personalFlow)
+            }
+            errorText={errors.personalFlow}
             required
           />
-
-          <Stack spacing={2.5}>
-            {values.metrics.map((pair, index) => (
-              <Stack key={index} spacing={1}>
-                <Box sx={{ width: '50%' }}>
-                  <Input
-                    label='Напишите заголовок'
-                    ariaLabel={`Заголовок показателя ${index + 1}`}
-                    value={pair.title}
-                    onChange={(title) => updateMetricTitle(index, title)}
-                    errorText={errors.metrics?.[index]?.title}
-                    multiline
-                    minRows={1}
-                    maxRows={3}
-                    required
-                  />
-                </Box>
-
-                <Collapse in={pair.title.trim() !== ''} timeout='auto'>
-                  <Stack spacing={1}>
-                    <FieldRow>
-                      <Input
-                        label='Показатель'
-                        placeholder='Было'
-                        value={pair.before}
-                        onChange={(before) =>
-                          updateMetricValue(index, 'before', before)
-                        }
-                        errorText={errors.metrics?.[index]?.before}
-                        required
-                      />
-                      <Input
-                        ariaLabel={`Стало, показатель ${index + 1}`}
-                        placeholder='Стало'
-                        value={pair.after}
-                        onChange={(after) =>
-                          updateMetricValue(index, 'after', after)
-                        }
-                        errorText={errors.metrics?.[index]?.after}
-                      />
-                    </FieldRow>
-                    {hasMetricValue(pair.before) &&
-                      hasMetricValue(pair.after) && (
-                        <SwitchField
-                          label='Положительный результат'
-                          checked={pair.enabled}
-                          onChange={(enabled) =>
-                            updateMetricSwitch(index, enabled)
-                          }
-                        />
-                      )}
-                  </Stack>
-                </Collapse>
-              </Stack>
-            ))}
-          </Stack>
-
-          <Stack spacing={1}>
-            {values.events.map((event, index) => (
-              <Input
-                key={index}
-                label='Мероприятие'
-                ariaLabel={`Мероприятие ${index + 1}`}
-                value={event}
-                onChange={(value) => updateEvent(index, value)}
-                errorText={errors.events?.[index]}
-                multiline
-                minRows={2}
-                maxRows={3}
-                required={index === 0}
-              />
-            ))}
-
-            <Typography variant='caption' color='text.secondary'>
-              {filledEventsCount}/{MAX_EVENTS}
-            </Typography>
-          </Stack>
-
-          <FileUpload
-            value={values.files}
-            onChange={(files) => updateField('files', files)}
-            maxFiles={1}
+          <Input
+            label='Отрасль'
+            value={values.industry}
+            onChange={(industry) => updateField('industry', industry)}
+            errorText={errors.industry}
+            required
           />
-        </AppForm>
-      </DialogContent>
+        </FieldRow>
 
-      <DialogActions>
-        <Button variant='text' onClick={handleClose}>
-          Отмена
-        </Button>
+        <Input
+          label='Основной результат'
+          value={values.mainResult}
+          onChange={(mainResult) => updateField('mainResult', mainResult)}
+          errorText={errors.mainResult}
+          multiline
+          minRows={2}
+          maxRows={6}
+          required
+        />
 
-        <Button type='button' variant='contained' onClick={submitForm}>
-          Отправить на модерацию
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <Stack spacing={2.5}>
+          {values.metrics.map((pair, index) => (
+            <Stack key={index} spacing={1}>
+              <Box sx={{ width: '50%' }}>
+                <Input
+                  label='Напишите заголовок'
+                  ariaLabel={`Заголовок показателя ${index + 1}`}
+                  value={pair.title}
+                  onChange={(title) => updateMetricTitle(index, title)}
+                  errorText={errors.metrics?.[index]?.title}
+                  multiline
+                  minRows={1}
+                  maxRows={3}
+                  required
+                />
+              </Box>
+
+              <Collapse in={pair.title.trim() !== ''} timeout='auto'>
+                <Stack spacing={1}>
+                  <FieldRow>
+                    <Input
+                      label='Показатель'
+                      placeholder='Было'
+                      value={pair.before}
+                      onChange={(before) =>
+                        updateMetricValue(index, 'before', before)
+                      }
+                      errorText={errors.metrics?.[index]?.before}
+                      required
+                    />
+                    <Input
+                      ariaLabel={`Стало, показатель ${index + 1}`}
+                      placeholder='Стало'
+                      value={pair.after}
+                      onChange={(after) =>
+                        updateMetricValue(index, 'after', after)
+                      }
+                      errorText={errors.metrics?.[index]?.after}
+                    />
+                  </FieldRow>
+                  {hasMetricValue(pair.before) &&
+                    hasMetricValue(pair.after) && (
+                      <SwitchField
+                        label='Положительный результат'
+                        checked={pair.enabled}
+                        onChange={(enabled) =>
+                          updateMetricSwitch(index, enabled)
+                        }
+                      />
+                    )}
+                </Stack>
+              </Collapse>
+            </Stack>
+          ))}
+        </Stack>
+
+        <Stack spacing={1}>
+          {values.events.map((event, index) => (
+            <Input
+              key={index}
+              label='Мероприятие'
+              ariaLabel={`Мероприятие ${index + 1}`}
+              value={event}
+              onChange={(value) => updateEvent(index, value)}
+              errorText={errors.events?.[index]}
+              multiline
+              minRows={2}
+              maxRows={3}
+              required={index === 0}
+            />
+          ))}
+
+          <Typography variant='caption' color='text.secondary'>
+            {filledEventsCount}/{MAX_EVENTS}
+          </Typography>
+        </Stack>
+
+        <FileUpload
+          value={values.files}
+          onChange={(files) => updateField('files', files)}
+          allowedTypes={ALL_FILE_TYPES}
+          maxSizeMb={3}
+          maxFiles={1}
+        />
+      </AppForm>
+    </ModalLayout>
   );
 }
