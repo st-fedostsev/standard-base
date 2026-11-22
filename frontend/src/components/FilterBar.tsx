@@ -1,14 +1,9 @@
 import { Fragment } from 'react';
 
-import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
-import CancelOutlined from '@mui/icons-material/CancelOutlined';
-
 import { DateRangeField } from '@/components/DateRangeField';
-import fieldStyles from '@/components/FilterField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { SearchInput } from '@/components/SearchInput';
-
 import {
   isFiltered,
   isInvalidRange,
@@ -17,31 +12,23 @@ import {
   type FilterValue,
   type FilterValues,
 } from '@/utils/types/filters';
+import CancelOutlined from '@mui/icons-material/CancelOutlined';
+import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
+
+import fieldStyles from '@/components/FilterField.module.css';
 
 type FilterBarProps<T extends FilterValues> = {
-  /** Описания фильтров в порядке отображения. */
   defs: FilterDef[];
-
-  /** Текущие значения фильтров. */
   value: T;
-
-  /** Начальные значения, к которым возвращает кнопка сброса. */
   defaults: T;
-
   onChange: (next: T) => void;
   dataTid?: string;
 };
 
-const DEFAULT_SELECT_WIDTH = 200;
-const SEARCH_WIDTH = 280;
-const DATE_RANGE_WIDTH = 340;
-
-/** Проверяет, изменилось ли значение относительно начального. */
 function isFieldChanged(
   current: FilterValue | undefined,
   initial: FilterValue | undefined
 ): boolean {
-  // Для множественного выбора порядок значений не важен.
   if (Array.isArray(current) && Array.isArray(initial)) {
     return (
       current.length !== initial.length ||
@@ -50,6 +37,18 @@ function isFieldChanged(
   }
 
   return JSON.stringify(current) !== JSON.stringify(initial);
+}
+
+function preferredWidth(def: FilterDef): number {
+  switch (def.type) {
+    case 'dateRange':
+      return 340;
+    case 'search':
+      return 280;
+    case 'select':
+    case 'multiselect':
+      return def.width ?? 200;
+  }
 }
 
 export function FilterBar<T extends FilterValues>({
@@ -149,36 +148,50 @@ export function FilterBar<T extends FilterValues>({
         }}
       >
         {defs.map((def) => {
-          const preferredWidth =
-            def.type === 'dateRange'
-              ? DATE_RANGE_WIDTH
-              : def.type === 'search'
-                ? SEARCH_WIDTH
-                : (def.width ?? DEFAULT_SELECT_WIDTH);
-
-          /*
-           * Даты выделяются отдельно внутри DateRangeField:
-           * можно выбрать только начало или только конец периода.
-           */
-          const changed =
-            def.type !== 'dateRange' &&
-            isFieldChanged(value[def.key], defaults[def.key]);
+          const isDateRange = def.type === 'dateRange';
+          const isSearch = def.type === 'search';
+          const width = preferredWidth(def);
 
           const field = (
             <Box
-              className={changed ? fieldStyles.active : undefined}
+              className={
+                !isDateRange &&
+                isFieldChanged(value[def.key], defaults[def.key])
+                  ? fieldStyles.active
+                  : undefined
+              }
               sx={{
-                // На широком экране фильтр не растягивается.
-                flex: `0 1 ${preferredWidth}px`,
-                width: preferredWidth,
-                maxWidth: '100%',
+                /*
+                 * На широком экране фильтр имеет удобный размер,
+                 * не растягиваясь автоматически на всю свободную ширину.
+                 */
+                flex: `0 1 ${width}px`,
+                width,
                 minWidth: 0,
+                maxWidth: '100%',
 
-                // На узкой области каждый фильтр занимает строку.
-                '@container filters (max-width: 440px)': {
+                // На узкой области один фильтр занимает всю строку.
+                '@container filters (max-width: 640px)': {
                   flex: '1 1 100%',
                   width: '100%',
                 },
+
+                // Поиск остаётся шире обычных select, но не переполняет строку.
+                ...(isSearch
+                  ? {
+                      flexBasis: Math.min(width, 360),
+                    }
+                  : {}),
+
+                // Диапазон дат может перейти на всю строку раньше остальных.
+                ...(isDateRange
+                  ? {
+                      '@container filters (max-width: 760px)': {
+                        flex: '1 1 100%',
+                        width: '100%',
+                      },
+                    }
+                  : {}),
               }}
             >
               {renderField(def)}
@@ -205,7 +218,9 @@ export function FilterBar<T extends FilterValues>({
             sx={{
               maxWidth: '100%',
               alignSelf: 'center',
+              whiteSpace: 'nowrap',
               textTransform: 'none',
+              color: 'text.secondary',
             }}
           >
             Сбросить

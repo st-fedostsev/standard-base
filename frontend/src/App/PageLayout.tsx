@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { Box, Typography } from '@mui/material';
+import WarningAmberRounded from '@mui/icons-material/WarningAmberRounded';
+import { Box, Button, CircularProgress, Typography } from '@mui/material';
 
 type PageLayoutProps = {
   title: string;
@@ -8,6 +9,20 @@ type PageLayoutProps = {
   actions?: ReactNode;
   filters?: ReactNode;
   children: ReactNode;
+
+  /** Loader только в области содержимого страницы. */
+  isLoading?: boolean;
+
+  /** Error state только в области содержимого страницы. */
+  isError?: boolean;
+  errorTitle?: string;
+  errorDescription?: string;
+  onRetry?: () => void;
+  isRetrying?: boolean;
+
+  /** Empty state только в области содержимого страницы. */
+  isEmpty?: boolean;
+  emptyState?: ReactNode;
 };
 
 export function PageLayout({
@@ -16,24 +31,29 @@ export function PageLayout({
   actions,
   filters,
   children,
+  isLoading = false,
+  isError = false,
+  errorTitle = 'Не удалось загрузить данные',
+  errorDescription = 'Попробуйте повторить запрос.',
+  onRetry,
+  isRetrying = false,
+  isEmpty = false,
+  emptyState,
 }: PageLayoutProps) {
   return (
     <Box
       sx={{
         width: '100%',
         minWidth: 0,
-
-        // Следим за шириной области страницы, а не всего окна.
         containerType: 'inline-size',
         containerName: 'page-layout',
       }}
     >
+      {/* Заголовок и действия всегда остаются видимыми. */}
       <Box
         sx={{
           display: 'grid',
           minWidth: 0,
-
-          // Кнопки выровнены по заголовку; подзаголовок — отдельно.
           gridTemplateColumns: 'minmax(0, 1fr) auto',
           gridTemplateAreas: `
             "title actions"
@@ -43,8 +63,7 @@ export function PageLayout({
           columnGap: 2,
           rowGap: 0.5,
 
-          // На узкой странице действия переходят под заголовок.
-          '@container page-layout (max-width: 720px)': {
+          '@container page-layout (max-width: 640px)': {
             gridTemplateColumns: 'minmax(0, 1fr)',
             gridTemplateAreas: `
               "title"
@@ -61,11 +80,7 @@ export function PageLayout({
             gridArea: 'title',
             minWidth: 0,
             fontWeight: 600,
-
-            // Показываем заголовок целиком, без многоточия.
-            whiteSpace: 'normal',
             overflowWrap: 'anywhere',
-
             '@container page-layout (max-width: 420px)': {
               fontSize: '1.5rem',
             },
@@ -107,7 +122,7 @@ export function PageLayout({
                 overflowWrap: 'anywhere',
               },
 
-              '@container page-layout (max-width: 720px)': {
+              '@container page-layout (max-width: 640px)': {
                 justifyContent: 'flex-start',
                 mt: 1,
               },
@@ -129,9 +144,84 @@ export function PageLayout({
         )}
       </Box>
 
+      {/* Фильтры не скрываются при пустом результате или ошибке. */}
       {filters != null && <Box sx={{ mt: 3, minWidth: 0 }}>{filters}</Box>}
 
-      <Box sx={{ mt: 3, minWidth: 0 }}>{children}</Box>
+      {/* Состояние меняется только в содержимом страницы. */}
+      <Box sx={{ mt: 3, minWidth: 0 }}>
+        {isLoading ? (
+          <Box
+            role='status'
+            aria-live='polite'
+            aria-busy='true'
+            sx={{
+              minHeight: 280,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1.5,
+            }}
+          >
+            <CircularProgress size={28} />
+            <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+              Загружаем данные…
+            </Typography>
+          </Box>
+        ) : isError ? (
+          <Box
+            role='alert'
+            sx={{
+              minHeight: 280,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              px: 2,
+              textAlign: 'center',
+            }}
+          >
+            <WarningAmberRounded
+              aria-hidden='true'
+              sx={{
+                fontSize: 40,
+                color: 'warning.main',
+                mb: 0.5,
+              }}
+            />
+
+            <Typography variant='subtitle1' sx={{ fontWeight: 600 }}>
+              {errorTitle}
+            </Typography>
+
+            <Typography
+              variant='body2'
+              sx={{
+                maxWidth: 420,
+                color: 'text.secondary',
+              }}
+            >
+              {errorDescription}
+            </Typography>
+
+            {onRetry && (
+              <Button
+                variant='outlined'
+                onClick={onRetry}
+                disabled={isRetrying}
+                sx={{ mt: 1 }}
+              >
+                {isRetrying ? 'Повторяем…' : 'Повторить'}
+              </Button>
+            )}
+          </Box>
+        ) : isEmpty && emptyState != null ? (
+          emptyState
+        ) : (
+          children
+        )}
+      </Box>
     </Box>
   );
 }
