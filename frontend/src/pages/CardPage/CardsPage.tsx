@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 import { PageLayout } from '@/App/PageLayout';
 import { DataTable } from '@/components/DataTable';
+import {
+  createEmptySelection,
+  type TableSelection,
+} from '@/components/DataTable/selection';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterBar } from '@/components/FilterBar';
 import { InfiniteScrollable } from '@/components/InfiniteScrollable/InfiniteScrollable';
@@ -27,7 +31,8 @@ export function CardsPage() {
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [selection, setSelection] =
+    useState<TableSelection>(createEmptySelection);
 
   const {
     cards,
@@ -48,9 +53,11 @@ export function CardsPage() {
     [cards, filters, categories]
   );
 
+  type CardRow = (typeof rows)[number];
+
   const changeFilters = (next: CardFilters) => {
     setFilters(next);
-    setSelected(new Set());
+    setSelection(createEmptySelection());
   };
 
   const hasFilters = isFiltered(filters, DEFAULT_CARD_FILTERS);
@@ -92,7 +99,7 @@ export function CardsPage() {
             startIcon={<AddIcon />}
             onClick={() => navigate('/cards/new')}
           >
-            Создать карточку
+            Создать
           </Button>
         </PermissionGuard>
       }
@@ -116,9 +123,19 @@ export function CardsPage() {
         <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
           <>
             <Button
-              variant='outlined'
+              variant='contained'
               startIcon={<FileUploadOutlined />}
-              disabled
+              //TODO импортируем файл onClick={}
+              sx={{
+                px: 2,
+                py: '6px',
+                minHeight: 36,
+                fontSize: 14,
+                fontWeight: 500,
+                lineHeight: '24px',
+                letterSpacing: '0.4px',
+                textTransform: 'uppercase',
+              }}
             >
               Импортировать
             </Button>
@@ -127,8 +144,18 @@ export function CardsPage() {
               variant='contained'
               startIcon={<AddIcon />}
               onClick={() => navigate('/cards/new')}
+              sx={{
+                px: 2,
+                py: '6px',
+                minHeight: 36,
+                fontSize: 14,
+                fontWeight: 500,
+                lineHeight: '24px',
+                letterSpacing: '0.4px',
+                textTransform: 'uppercase',
+              }}
             >
-              Создать карточку
+              Создать
             </Button>
           </>
         </PermissionGuard>
@@ -149,10 +176,13 @@ export function CardsPage() {
         loadMoreError={isFetchNextPageError}
         onRetry={retryNextPage}
       >
-        <DataTable
+        <DataTable<CardRow>
           toolbarStart={
             !isInitialLoading ? (
-              <Typography variant='body2' sx={{ fontWeight: 600 }}>
+              <Typography
+                variant='subtitle1'
+                sx={{ fontWeight: 600, fontSize: 18 }}
+              >
                 {countLabel}
               </Typography>
             ) : null
@@ -160,8 +190,9 @@ export function CardsPage() {
           columns={CARD_COLUMNS}
           rows={rows}
           getRowId={(card) => card.id}
-          selectedIds={selected}
-          onSelectedIdsChange={setSelected}
+          totalMatchingCount={totalCount}
+          selection={selection}
+          onSelectionChange={setSelection}
           onRowClick={(card) => navigate(`/cards/${card.id}`)}
           massActionsPanel={({ count, selectAll, clear }) => (
             <MassActionsPanel

@@ -1,6 +1,6 @@
 import type { NavItem } from '@/utils/types/navigation';
-import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
-import FolderOpenOutlined from '@mui/icons-material/FolderOpenOutlined';
+import PlaylistAddCheck from '@mui/icons-material/PlaylistAddCheck';
+import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
 import HelpOutlined from '@mui/icons-material/HelpOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import HomeOutlined from '@mui/icons-material/HomeOutlined';
@@ -20,14 +20,14 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'base',
     label: 'Стандарты и практики',
     to: '/base',
-    icon: FolderOpenOutlined,
+    icon: StickyNote2Outlined,
     roles: Object.values(ROLES),
   },
   {
     id: 'moderation',
     label: 'На согласовании',
     to: '/moderation',
-    icon: FactCheckOutlined,
+    icon: PlaylistAddCheck,
     roles: [ROLES.Author, ROLES.Admin],
   },
   {
@@ -44,10 +44,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: HistoryOutlined,
     roles: [ROLES.Admin],
   },
-];
-
-/** Пункты внизу меню. Выглядят так же, как основные. */
-export const FOOTER_ITEMS: NavItem[] = [
   {
     id: 'docs',
     label: 'Документация',
@@ -55,3 +51,6 @@ export const FOOTER_ITEMS: NavItem[] = [
     icon: HelpOutlined,
   },
 ];
+
+/** Пункты внизу меню. Выглядят так же, как основные. */
+export const FOOTER_ITEMS: NavItem[] = [];

@@ -10,9 +10,11 @@ import {
   InputAdornment,
   Popover,
   TextField,
-  type SxProps,
   type Theme,
 } from '@mui/material';
+import type { SystemStyleObject } from '@mui/system';
+
+import { fieldSx } from './fieldSx';
 
 type DateRangeFieldProps = {
   value: DateRangeValue;
@@ -223,23 +225,22 @@ export function DateRangeField({
   const initialDate =
     activeField === 'to' ? value.to || value.from : value.from || value.to;
 
-  const activeFieldSx = (active: boolean): SxProps<Theme> => {
-    if (!active) return {};
-
-    return {
-      '& .MuiInputBase-input': {
-        fontWeight: 600,
-      },
-      '& .MuiOutlinedInput-root:not(.Mui-error) .MuiOutlinedInput-notchedOutline':
-        {
-          borderColor: 'primary.main',
-        },
-      '& .MuiOutlinedInput-root:not(.Mui-error):hover .MuiOutlinedInput-notchedOutline':
-        {
-          borderColor: 'primary.main',
-        },
-    };
-  };
+  const activeFieldSx = (active: boolean): SystemStyleObject<Theme> =>
+    active
+      ? {
+          '& .MuiInputBase-input': {
+            fontWeight: 600,
+          },
+          '& .MuiOutlinedInput-root:not(.Mui-error) .MuiOutlinedInput-notchedOutline':
+            {
+              borderColor: 'primary.main',
+            },
+          '& .MuiOutlinedInput-root:not(.Mui-error):hover .MuiOutlinedInput-notchedOutline':
+            {
+              borderColor: 'primary.main',
+            },
+        }
+      : {};
 
   return (
     <>
@@ -293,7 +294,10 @@ export function DateRangeField({
               ),
             },
           }}
-          sx={activeFieldSx(fromActive)}
+          sx={{
+            ...fieldSx,
+            ...activeFieldSx(fromActive),
+          }}
         />
 
         <TextField
@@ -333,7 +337,10 @@ export function DateRangeField({
               ),
             },
           }}
-          sx={activeFieldSx(toActive)}
+          sx={{
+            ...fieldSx,
+            ...activeFieldSx(toActive),
+          }}
         />
       </Box>
 

@@ -79,11 +79,14 @@ export function PageLayout({
           sx={{
             gridArea: 'title',
             minWidth: 0,
+            fontFamily: 'Raleway, sans-serif',
+            fontSize: '24px',
             fontWeight: 600,
+            lineHeight: 1,
+            letterSpacing: 0,
+            color: '#000',
+            textTransform: 'uppercase',
             overflowWrap: 'anywhere',
-            '@container page-layout (max-width: 420px)': {
-              fontSize: '1.5rem',
-            },
           }}
         >
           {title}
