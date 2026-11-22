@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { FilterBar } from '@/components/FilterBar';
 import { InfiniteScrollable } from '@/components/InfiniteScrollable/InfiniteScrollable';
 import { MassActionsPanel } from '@/components/MassActionsPanel';
+import { AddCardModal } from '@/components/Modals/AddCardModal';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { DEFAULT_CARD_FILTERS, type CardFilters } from '@/utils/types/cards';
 import { isFiltered } from '@/utils/types/filters';
@@ -33,6 +34,7 @@ export function CardsPage() {
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
   const [selection, setSelection] =
     useState<TableSelection>(createEmptySelection);
+  const [addCardOpen, setAddCardOpen] = useState(false);
 
   const {
     cards,
@@ -97,7 +99,7 @@ export function CardsPage() {
           <Button
             variant='outlined'
             startIcon={<AddIcon />}
-            onClick={() => navigate('/cards/new')}
+            onClick={() => setAddCardOpen(true)}
           >
             Создать
           </Button>
@@ -125,17 +127,7 @@ export function CardsPage() {
             <Button
               variant='contained'
               startIcon={<FileUploadOutlined />}
-              //TODO импортируем файл onClick={}
-              sx={{
-                px: 2,
-                py: '6px',
-                minHeight: 36,
-                fontSize: 14,
-                fontWeight: 500,
-                lineHeight: '24px',
-                letterSpacing: '0.4px',
-                textTransform: 'uppercase',
-              }}
+              // TODO: подключить импорт файла.
             >
               Импортировать
             </Button>
@@ -143,17 +135,7 @@ export function CardsPage() {
             <Button
               variant='contained'
               startIcon={<AddIcon />}
-              onClick={() => navigate('/cards/new')}
-              sx={{
-                px: 2,
-                py: '6px',
-                minHeight: 36,
-                fontSize: 14,
-                fontWeight: 500,
-                lineHeight: '24px',
-                letterSpacing: '0.4px',
-                textTransform: 'uppercase',
-              }}
+              onClick={() => setAddCardOpen(true)}
             >
               Создать
             </Button>
@@ -231,6 +213,13 @@ export function CardsPage() {
           ]}
         />
       </InfiniteScrollable>
+
+      <AddCardModal
+        open={addCardOpen}
+        onClose={() => setAddCardOpen(false)}
+        // Пока форма только проверяется: сохранение карточки не подключено.
+        onSubmit={() => setAddCardOpen(false)}
+      />
     </PageLayout>
   );
 }
