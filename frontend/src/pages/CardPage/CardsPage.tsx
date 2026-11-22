@@ -111,115 +111,136 @@ export function CardsPage() {
   const retryNextPage = () => fetchNextPage().then(() => undefined);
 
   return (
-    <PageLayout
-      title='Стандарты и практики'
-      isLoading={isInitialLoading}
-      isError={isInitialError}
-      errorTitle='Не удалось загрузить карточки'
-      errorDescription='Проверьте соединение и попробуйте снова.'
-      onRetry={() => void refetch()}
-      isRetrying={isInitialLoading}
-      isEmpty={isPageEmpty}
-      emptyState={emptyState}
-      actions={
-        <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
-          <>
-            <Button
-              variant='contained'
-              startIcon={<FileUploadOutlined />}
-              // TODO: подключить импорт файла.
-            >
-              Импортировать
-            </Button>
-
-            <Button
-              variant='contained'
-              startIcon={<AddIcon />}
-              onClick={() => setAddCardOpen(true)}
-            >
-              Создать
-            </Button>
-          </>
-        </PermissionGuard>
-      }
-      filters={
-        <FilterBar
-          defs={filterDefs}
-          value={filters}
-          defaults={DEFAULT_CARD_FILTERS}
-          onChange={changeFilters}
-        />
-      }
-    >
-      <InfiniteScrollable
-        hasMore={hasNextPage}
-        isLoadingMore={isFetchingNextPage}
-        onLoadMore={() => fetchNextPage().then(() => undefined)}
-        loadMoreError={isFetchNextPageError}
-        onRetry={retryNextPage}
-      >
-        <DataTable<CardRow>
-          toolbarStart={
-            !isInitialLoading ? (
-              <Typography
-                variant='subtitle1'
-                sx={{ fontWeight: 600, fontSize: 18 }}
+    <>
+      <PageLayout
+        title='Стандарты и практики'
+        isLoading={isInitialLoading}
+        isError={isInitialError}
+        errorTitle='Не удалось загрузить карточки'
+        errorDescription='Проверьте соединение и попробуйте снова.'
+        onRetry={() => void refetch()}
+        isRetrying={isInitialLoading}
+        isEmpty={isPageEmpty}
+        emptyState={emptyState}
+        actions={
+          <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
+            <>
+              <Button
+                variant='contained'
+                startIcon={<FileUploadOutlined />}
+                //TODO импортируем файл onClick={}
+                sx={{
+                  px: 2,
+                  py: '6px',
+                  minHeight: 36,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  lineHeight: '24px',
+                  letterSpacing: '0.4px',
+                  textTransform: 'uppercase',
+                }}
               >
-                {countLabel}
-              </Typography>
-            ) : null
-          }
-          columns={CARD_COLUMNS}
-          rows={rows}
-          getRowId={(card) => card.id}
-          totalMatchingCount={totalCount}
-          selection={selection}
-          onSelectionChange={setSelection}
-          onRowClick={(card) => navigate(`/cards/${card.id}`)}
-          massActionsPanel={({ count, selectAll, clear }) => (
-            <MassActionsPanel
-              count={count}
-              onClear={clear}
-              onSelectAll={selectAll}
-              actions={[
-                {
-                  id: 'export-selected',
-                  label: 'Экспортировать выбранное',
-                  icon: FileDownloadOutlined,
-                  disabled: true,
-                  onClick: () => {
-                    // TODO: подключить экспорт выбранных карточек.
-                  },
-                },
-              ]}
-            />
-          )}
-          kebabMenu={(card) => [
-            {
-              id: 'open',
-              label: 'Открыть',
-              icon: DescriptionOutlined,
-              onClick: () => navigate(`/cards/${card.id}`),
-            },
-            {
-              id: 'export-card',
-              label: 'Экспортировать карточку',
-              icon: FileDownloadOutlined,
-              disabled: true,
-              onClick: () => {
-                // TODO: подключить экспорт карточки.
-              },
-            },
-          ]}
-        />
-      </InfiniteScrollable>
+                Импортировать
+              </Button>
 
+              <Button
+                variant='contained'
+                startIcon={<AddIcon />}
+                onClick={() => setAddCardOpen(true)}
+                sx={{
+                  px: 2,
+                  py: '6px',
+                  minHeight: 36,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  lineHeight: '24px',
+                  letterSpacing: '0.4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Создать
+              </Button>
+            </>
+          </PermissionGuard>
+        }
+        filters={
+          <FilterBar
+            defs={filterDefs}
+            value={filters}
+            defaults={DEFAULT_CARD_FILTERS}
+            onChange={changeFilters}
+          />
+        }
+      >
+        <InfiniteScrollable
+          hasMore={hasNextPage}
+          isLoadingMore={isFetchingNextPage}
+          onLoadMore={() => fetchNextPage().then(() => undefined)}
+          loadMoreError={isFetchNextPageError}
+          onRetry={retryNextPage}
+        >
+          <DataTable<CardRow>
+            toolbarStart={
+              !isInitialLoading ? (
+                <Typography
+                  variant='subtitle1'
+                  sx={{ fontWeight: 600, fontSize: 18 }}
+                >
+                  {countLabel}
+                </Typography>
+              ) : null
+            }
+            columns={CARD_COLUMNS}
+            rows={rows}
+            getRowId={(card) => card.id}
+            totalMatchingCount={totalCount}
+            selection={selection}
+            onSelectionChange={setSelection}
+            onRowClick={(card) => navigate(`/cards/${card.id}`)}
+            massActionsPanel={({ count, selectAll, clear }) => (
+              <MassActionsPanel
+                count={count}
+                onClear={clear}
+                onSelectAll={selectAll}
+                actions={[
+                  {
+                    id: 'export-selected',
+                    label: 'Экспортировать выбранное',
+                    icon: FileDownloadOutlined,
+                    disabled: true,
+                    onClick: () => {
+                      // TODO: подключить экспорт выбранных карточек.
+                    },
+                  },
+                ]}
+              />
+            )}
+            kebabMenu={(card) => [
+              {
+                id: 'open',
+                label: 'Открыть',
+                icon: DescriptionOutlined,
+                onClick: () => navigate(`/cards/${card.id}`),
+              },
+              {
+                id: 'export-card',
+                label: 'Экспортировать карточку',
+                icon: FileDownloadOutlined,
+                disabled: true,
+                onClick: () => {
+                  // TODO: подключить экспорт карточки.
+                },
+              },
+            ]}
+          />
+        </InfiniteScrollable>
+      </PageLayout>
       <AddCardModal
         open={addCardOpen}
         onClose={() => setAddCardOpen(false)}
         // Пока форма только проверяется: сохранение карточки не подключено.
         onSubmit={() => setAddCardOpen(false)}
       />
-    </PageLayout>
+    </>
   );
 }
