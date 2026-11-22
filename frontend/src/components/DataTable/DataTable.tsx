@@ -7,6 +7,13 @@ import { DesktopTable } from './components/DesktopTable';
 import { ViewSwitcher, type ViewMode } from './components/ViewSwitcher';
 import { COMPACT_WIDTH, PANEL_SPACER_PX } from './constants';
 import { useContainerWidth } from './hooks/useContainerWidth';
+import {
+  createEmptySelection,
+  getSelectedCount,
+  isRowSelected,
+  toggleAllMatching,
+  toggleRow,
+} from './selection';
 import type {
   DataTableProps,
   MassActionsContext,
@@ -27,8 +34,9 @@ export function DataTable<T>({
   columns,
   rows,
   getRowId,
-  selectedIds,
-  onSelectedIdsChange,
+  totalMatchingCount,
+  selection,
+  onSelectionChange,
   massActionsPanel,
   kebabMenu,
   onRowClick,
@@ -41,17 +49,13 @@ export function DataTable<T>({
   const { containerRef, width } = useContainerWidth();
 
   const [sort, setSort] = useState<SortState>(null);
-
-  // На широкой области выбранный режим сохраняется при сужении и расширении.
   const [preferredView, setPreferredView] = useState<ViewMode>('table');
 
   const isCompact = width !== null && width < COMPACT_WIDTH;
   const currentView: ViewMode = isCompact ? 'cards' : preferredView;
 
   const selectable =
-    selectedIds !== undefined &&
-    onSelectedIdsChange !== undefined &&
-    massActionsPanel !== undefined;
+    onSelectionChange !== undefined && massActionsPanel !== undefined;
 
   const state: TableState = isLoading
     ? 'loading'
@@ -76,60 +80,46 @@ export function DataTable<T>({
     );
   }, [rows, columns, sort]);
 
-  const visibleIds = rows.map(getRowId);
+  // Передаём в таблицу выбранные ID только для загруженных строк.
+  // Само состояние выбора хранится режимом ids/allMatching.
+  const visibleSelectedIds = useMemo(() => {
+    const ids = new Set<string>();
 
-  const visibleSelected = visibleIds.filter((id) =>
-    selectedIds?.has(id)
-  ).length;
+    for (const row of sortedRows) {
+      const id = getRowId(row);
 
+      if (isRowSelected(selection, id)) {
+        ids.add(id);
+      }
+    }
+
+    return ids;
+  }, [sortedRows, getRowId, selection]);
+
+  const totalSelected = getSelectedCount(selection, totalMatchingCount);
+
+  // Чекбокс заголовка отражает выбор всех результатов, не только загруженных строк.
   const allSelected =
-    visibleIds.length > 0 && visibleSelected === visibleIds.length;
+    totalMatchingCount > 0 && totalSelected === totalMatchingCount;
 
-  const someSelected = visibleSelected > 0 && !allSelected;
-  const totalSelected = selectedIds?.size ?? 0;
+  const someSelected = totalSelected > 0 && !allSelected;
 
-  const selectVisible = () => {
-    if (!selectedIds || !onSelectedIdsChange) return;
+  const handleToggleAll = () => {
+    if (!selectable) return;
 
-    const next = new Set(selectedIds);
-
-    visibleIds.forEach((id) => next.add(id));
-
-    onSelectedIdsChange(next);
+    onSelectionChange(toggleAllMatching(selection, totalMatchingCount));
   };
 
-  const toggleAll = () => {
-    if (!selectedIds || !onSelectedIdsChange) return;
+  const handleToggleOne = (id: string) => {
+    if (!selectable) return;
 
-    const next = new Set(selectedIds);
-
-    if (allSelected) {
-      visibleIds.forEach((id) => next.delete(id));
-    } else {
-      visibleIds.forEach((id) => next.add(id));
-    }
-
-    onSelectedIdsChange(next);
-  };
-
-  const toggleOne = (id: string) => {
-    if (!selectedIds || !onSelectedIdsChange) return;
-
-    const next = new Set(selectedIds);
-
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-
-    onSelectedIdsChange(next);
+    onSelectionChange(toggleRow(selection, id));
   };
 
   const panelContext: MassActionsContext = {
     count: totalSelected,
-    selectAll: selectVisible,
-    clear: () => onSelectedIdsChange?.(new Set()),
+    selectAll: handleToggleAll,
+    clear: () => onSelectionChange?.(createEmptySelection()),
   };
 
   const viewProps: TableViewProps<T> = {
@@ -141,11 +131,11 @@ export function DataTable<T>({
     onSortChange: setSort,
 
     selectable,
-    selectedIds,
+    selectedIds: visibleSelectedIds,
     allSelected,
     someSelected,
-    onToggleAll: toggleAll,
-    onToggleOne: toggleOne,
+    onToggleAll: handleToggleAll,
+    onToggleOne: handleToggleOne,
 
     kebabMenu,
     onRowClick,
@@ -162,7 +152,6 @@ export function DataTable<T>({
         minWidth: 0,
       }}
     >
-      {/* Счётчик слева, переключатель вида справа */}
       {width !== null && (
         <Box
           sx={{

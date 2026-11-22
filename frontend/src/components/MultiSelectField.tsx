@@ -1,5 +1,9 @@
 import { useId, useMemo, useState } from 'react';
 
+import type { FilterOption } from '@/utils/types/filters';
+import CancelOutlined from '@mui/icons-material/CancelOutlined';
+import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
+import SearchOutlined from '@mui/icons-material/SearchOutlined';
 import {
   Box,
   Button,
@@ -11,11 +15,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import CancelOutlined from '@mui/icons-material/CancelOutlined';
-import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
-import SearchOutlined from '@mui/icons-material/SearchOutlined';
-
-import type { FilterOption } from '@/utils/types/filters';
 
 type MultiSelectFieldProps = {
   label: string;
@@ -95,23 +94,18 @@ export function MultiSelectField({
           textAlign: 'left',
           textTransform: 'none',
 
-          /*
-           * Цвет и рамка зависят от состояния фильтра.
-           * Здесь задана обводка именно этого компонента.
-           */
+          bgcolor: '#fff',
           color: active ? 'text.primary' : 'text.secondary',
           fontWeight: active ? 600 : 400,
           borderColor: active ? 'primary.main' : 'divider',
 
           '&:hover': {
+            bgcolor: '#fff',
             borderColor: active ? 'primary.main' : 'text.secondary',
-            bgcolor: 'action.hover',
           },
 
-          '&.Mui-focusVisible': {
-            outline: '2px solid',
-            outlineColor: 'primary.main',
-            outlineOffset: 2,
+          '&:active, &.Mui-focusVisible': {
+            bgcolor: '#fff',
           },
 
           '& .MuiButton-endIcon': {
@@ -163,6 +157,30 @@ export function MultiSelectField({
               placeholder={`Поиск: ${label.toLowerCase()}`}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              sx={{
+                minWidth: 0,
+                justifyContent: 'space-between',
+                textAlign: 'left',
+                textTransform: 'none',
+
+                bgcolor: '#fff',
+                color: active ? 'text.primary' : 'text.secondary',
+                fontWeight: active ? 600 : 400,
+                borderColor: active ? 'primary.main' : 'divider',
+
+                '&:hover': {
+                  bgcolor: '#fff',
+                  borderColor: active ? 'primary.main' : 'text.secondary',
+                },
+
+                '&:active, &.Mui-focusVisible': {
+                  bgcolor: '#fff',
+                },
+
+                '& .MuiButton-endIcon': {
+                  flexShrink: 0,
+                },
+              }}
               slotProps={{
                 htmlInput: {
                   'aria-label': `Поиск: ${label.toLowerCase()}`,

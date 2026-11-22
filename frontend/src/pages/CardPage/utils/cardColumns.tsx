@@ -1,6 +1,6 @@
 import { CellLines, SORT_LABELS, type Column } from '@/components/DataTable';
 import { CARD_STATUS_LABELS, type CardRow } from '@/utils/types/cards';
-import { Chip, Typography } from '@mui/material';
+import { Chip } from '@mui/material';
 
 import { getCardAuthorName } from './cardUtils';
 
@@ -20,7 +20,9 @@ export const CARD_COLUMNS: Column<CardRow>[] = [
     width: 180,
     sortValue: (card) => card.category,
     sortLabels: SORT_LABELS.text,
-    render: (card) => <Typography variant='body2'>{card.category}</Typography>,
+    render: (card) => (
+      <Chip size='small' variant='filled' label={card.category} />
+    ),
   },
   {
     key: 'author',
@@ -44,7 +46,7 @@ export const CARD_COLUMNS: Column<CardRow>[] = [
     render: (card) => (
       <Chip
         size='small'
-        variant='outlined'
+        variant='filled'
         label={CARD_STATUS_LABELS[card.status]}
       />
     ),

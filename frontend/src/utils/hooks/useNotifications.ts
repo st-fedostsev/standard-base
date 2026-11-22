@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react';
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { api } from '@/utils/api';
 import { useAuth } from '@/utils/hooks/useAuth';
 import type { NotificationItem } from '@/utils/types/notifications';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const MAX_PAGE_SIZE = 20;
-
 const EMPTY_NOTIFICATIONS: NotificationItem[] = [];
 
 type PageState = {
@@ -21,9 +19,21 @@ type MarkReadParams = {
   userId: string;
 };
 
+function getUnreadCount(response: unknown): number | undefined {
+  if (typeof response !== 'object' || response === null) {
+    return undefined;
+  }
+
+  const data = response as Record<string, unknown>;
+  const value = data.unread_count ?? data.unreadCount;
+
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
 export function useNotifications(
   requestedPageSize: number | null,
-  page: number,
   isPanelOpen: boolean
 ) {
   const queryClient = useQueryClient();
@@ -37,43 +47,20 @@ export function useNotifications(
       ? null
       : Math.min(MAX_PAGE_SIZE, Math.max(0, Math.floor(requestedPageSize)));
 
-  // Держим страницу и pageSize вместе: если высота панели изменилась,
-  // в этот рендер сразу используем первую страницу нового размера.
   const [pageState, setPageState] = useState<PageState>({
     userId: null,
     pageSize: null,
     page: 0,
   });
 
-  const effectivePage =
-    pageState.userId === userId && pageState.pageSize === pageSize ? page : 0;
+  // Если пользователь или размер страницы изменились, сразу используем страницу 0.
+  const isPageStateCurrent =
+    pageState.userId === userId && pageState.pageSize === pageSize;
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPageState((previous) => {
-      if (
-        previous.userId === userId &&
-        previous.pageSize === pageSize &&
-        previous.page === page
-      ) {
-        return previous;
-      }
+  const page = isPageStateCurrent ? pageState.page : 0;
+  const offset = pageSize === null || pageSize === 0 ? 0 : page * pageSize;
 
-      const sameUserAndSize =
-        previous.userId === userId && previous.pageSize === pageSize;
-
-      return {
-        userId,
-        pageSize,
-        page: sameUserAndSize ? page : 0,
-      };
-    });
-  }, [userId, pageSize, page]);
-
-  const offset =
-    pageSize === null || pageSize === 0 ? 0 : effectivePage * pageSize;
-
-  // Небольшой запрос нужен для счётчика на значке, даже при закрытой панели.
+  // Запрос нужен для счётчика на иконке, в том числе при закрытой панели.
   const summaryQuery = useQuery({
     queryKey: ['notifications', userId, 'summary'],
     queryFn: ({ signal }) =>
@@ -81,7 +68,7 @@ export function useNotifications(
     enabled: userId !== null,
   });
 
-  // Список запрашивается только для открытой панели и вычисленного pageSize.
+  // Список запрашивается только для открытой панели.
   const pageQuery = useQuery({
     queryKey: ['notifications', userId, 'page', pageSize, offset],
     queryFn: async ({ signal }) => {
@@ -94,7 +81,6 @@ export function useNotifications(
         signal
       );
 
-      // Защита от ответа длиннее выделенного места в панели.
       return {
         ...response,
         data: response.data.slice(0, pageSize),
@@ -114,8 +100,56 @@ export function useNotifications(
     },
   });
 
+  const markAllReadMutation = useMutation({
+    mutationFn: async (currentUserId: string) => {
+      const unreadIds = new Set<string>();
+      let currentOffset = 0;
+
+      // Получаем все страницы, чтобы отметить прочитанными все уведомления.
+      while (true) {
+        const response = await api.Notifications.getList({
+          limit: MAX_PAGE_SIZE,
+          offset: currentOffset,
+        });
+
+        response.data.forEach((notification) => {
+          if (!notification.read) {
+            unreadIds.add(notification.id);
+          }
+        });
+
+        currentOffset += response.data.length;
+
+        const reachedEnd =
+          response.data.length === 0 ||
+          response.data.length < MAX_PAGE_SIZE ||
+          (typeof response.result === 'number' &&
+            currentOffset >= response.result);
+
+        if (reachedEnd) {
+          break;
+        }
+      }
+
+      for (const id of unreadIds) {
+        await api.Notifications.markRead(id);
+      }
+
+      return {
+        userId: currentUserId,
+        markedCount: unreadIds.size,
+      };
+    },
+
+    onSettled: async (_data, _error, currentUserId) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['notifications', currentUserId],
+      });
+    },
+  });
+
   const notifications = pageQuery.data?.data ?? EMPTY_NOTIFICATIONS;
-  const unreadCount = summaryQuery.data?.unreadCount;
+  const unreadCount = getUnreadCount(summaryQuery.data);
   const totalCount = pageQuery.data?.result ?? summaryQuery.data?.result;
 
   const totalPages =
@@ -123,7 +157,7 @@ export function useNotifications(
       ? Math.max(1, Math.ceil(totalCount / pageSize))
       : undefined;
 
-  const hasPreviousPage = effectivePage > 0;
+  const hasPreviousPage = page > 0;
 
   const hasNextPage =
     pageSize !== null &&
@@ -132,22 +166,38 @@ export function useNotifications(
     offset + notifications.length < totalCount;
 
   const nextPage = () => {
-    if (!hasNextPage || pageQuery.isLoading) return;
+    if (
+      !hasNextPage ||
+      pageQuery.isFetching ||
+      userId === null ||
+      pageSize === null ||
+      pageSize === 0
+    ) {
+      return;
+    }
 
     setPageState({
       userId,
       pageSize,
-      page: effectivePage + 1,
+      page: page + 1,
     });
   };
 
   const previousPage = () => {
-    if (!hasPreviousPage || pageQuery.isLoading || pageSize === null) return;
+    if (
+      !hasPreviousPage ||
+      pageQuery.isFetching ||
+      userId === null ||
+      pageSize === null ||
+      pageSize === 0
+    ) {
+      return;
+    }
 
     setPageState({
       userId,
       pageSize,
-      page: Math.max(0, effectivePage - 1),
+      page: Math.max(0, page - 1),
     });
   };
 
@@ -157,6 +207,14 @@ export function useNotifications(
     }
 
     await markReadMutation.mutateAsync({ id, userId });
+  };
+
+  const markAllRead = async () => {
+    if (!userId) {
+      throw new Error('Пользователь не авторизован');
+    }
+
+    await markAllReadMutation.mutateAsync(userId);
   };
 
   return {
@@ -178,11 +236,14 @@ export function useNotifications(
       pageSize !== null &&
       pageSize > 0 &&
       pageQuery.isLoading,
+    isFetching: pageQuery.isFetching,
     isError: pageQuery.isError,
     refetch: pageQuery.refetch,
 
     markRead,
+    markAllRead,
     isMarkingRead: markReadMutation.isPending,
+    isMarkingAllRead: markAllReadMutation.isPending,
     markReadError: markReadMutation.error,
   };
 }

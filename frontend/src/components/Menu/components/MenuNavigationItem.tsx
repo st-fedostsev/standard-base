@@ -12,6 +12,7 @@ type MenuNavigationItemProps = {
   rail: boolean;
   showLabels: boolean;
   onNavigate: () => void;
+  notificationsOpen: boolean;
 };
 
 export function MenuNavigationItem({
@@ -19,6 +20,7 @@ export function MenuNavigationItem({
   rail,
   showLabels,
   onNavigate,
+  notificationsOpen
 }: MenuNavigationItemProps) {
   const { pathname } = useLocation();
   const Icon = item.icon;
@@ -55,7 +57,7 @@ export function MenuNavigationItem({
     <ListItemButton
       component={NavLink}
       to={item.to}
-      selected={pathname === item.to}
+      selected={!notificationsOpen && pathname === item.to}
       className={styles.item}
       aria-label={item.label}
       sx={itemSx}

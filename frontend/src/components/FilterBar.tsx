@@ -15,6 +15,8 @@ import {
 import CancelOutlined from '@mui/icons-material/CancelOutlined';
 import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
 
+import { fieldSx } from './fieldSx';
+
 import fieldStyles from '@/components/FilterField.module.css';
 
 type FilterBarProps<T extends FilterValues> = {
@@ -91,6 +93,9 @@ export function FilterBar<T extends FilterValues>({
         return (
           <TextField
             select
+            sx={{
+              ...fieldSx,
+            }}
             fullWidth
             size='small'
             label={def.label}

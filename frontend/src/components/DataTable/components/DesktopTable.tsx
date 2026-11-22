@@ -1,3 +1,4 @@
+import { RowKebab } from '@/components/RowKebab';
 import {
   Checkbox,
   Skeleton,
@@ -10,8 +11,6 @@ import {
   Typography,
 } from '@mui/material';
 
-import { RowKebab } from '@/components/RowKebab';
-
 import {
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_COLUMN_WEIGHT,
@@ -22,14 +21,76 @@ import {
 import type { TableViewProps } from '../types';
 import { ColumnHeader } from './ColumnHeader';
 
+const HEADER_BACKGROUND = '#1976D226';
+const TABLE_TEXT_COLOR = '#242424';
+
 const bodyCellSx = {
   py: 1.5,
   verticalAlign: 'middle',
   overflowWrap: 'anywhere',
   wordBreak: 'break-word',
+  color: TABLE_TEXT_COLOR,
+  fontFamily: 'Raleway, Arial, sans-serif',
+  fontSize: 14,
+  fontWeight: 400,
+  lineHeight: '20px',
+  letterSpacing: '0.15px',
+
+  '& .MuiTypography-root': {
+    color: 'inherit',
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    fontWeight: 'inherit',
+    lineHeight: 'inherit',
+    letterSpacing: 'inherit',
+  },
 
   '& .MuiChip-root': {
     maxWidth: '100%',
+    height: 24,
+    borderRadius: 12,
+    fontFamily: 'Raleway, sans-serif',
+    fontSize: 12,
+    lineHeight: '16px',
+  },
+
+  '& .MuiChip-label': {
+    px: 1,
+  },
+
+  '& .MuiChip-filled': {
+    bgcolor: '#E9ECEF',
+    color: '#242424',
+  },
+
+  '& .MuiChip-outlined': {
+    borderColor: 'rgba(0, 0, 0, 0.16)',
+    color: '#424242',
+  },
+} as const;
+
+const headerCellSx = {
+  py: 1.5,
+  bgcolor: HEADER_BACKGROUND,
+  color: TABLE_TEXT_COLOR,
+  fontFamily: 'Raleway, Arial, sans-serif',
+  fontSize: 14,
+  fontWeight: 600,
+  lineHeight: '20px',
+  letterSpacing: '0.15px',
+  whiteSpace: 'nowrap',
+
+  '& .MuiTypography-root, & .MuiButtonBase-root': {
+    color: 'inherit',
+    fontFamily: 'inherit',
+    fontSize: 'inherit',
+    fontWeight: 'inherit',
+    lineHeight: 'inherit',
+    letterSpacing: 'inherit',
+  },
+
+  '& .MuiSvgIcon-root': {
+    color: 'inherit',
   },
 } as const;
 
@@ -79,12 +140,14 @@ export function DesktopTable<T>({
         width: '100%',
         minWidth: 0,
         overflowX: 'visible',
+        bgcolor: '#fff',
       }}
     >
       <Table
         sx={{
           width: '100%',
           tableLayout: 'fixed',
+          bgcolor: '#fff',
         }}
       >
         <colgroup>
@@ -97,10 +160,22 @@ export function DesktopTable<T>({
           {kebabMenu && <col style={{ width: KEBAB_COLUMN_WIDTH }} />}
         </colgroup>
 
-        <TableHead>
+        <TableHead
+          sx={{
+            '& .MuiTableCell-root': {
+              bgcolor: HEADER_BACKGROUND,
+            },
+            '& .MuiTableCell-root:hover': {
+              bgcolor: HEADER_BACKGROUND,
+            },
+            '& .MuiTableCell-root .MuiButtonBase-root:hover': {
+              bgcolor: 'action.hover',
+            },
+          }}
+        >
           <TableRow>
             {selectable && (
-              <TableCell padding='checkbox'>
+              <TableCell padding='checkbox' sx={headerCellSx}>
                 <Checkbox
                   checked={allSelected}
                   indeterminate={someSelected}
@@ -123,6 +198,7 @@ export function DesktopTable<T>({
                   key={column.key}
                   sortDirection={activeDir ?? false}
                   sx={{
+                    ...headerCellSx,
                     verticalAlign: 'middle',
                     overflowWrap: 'anywhere',
                   }}
@@ -145,7 +221,9 @@ export function DesktopTable<T>({
               );
             })}
 
-            {kebabMenu && <TableCell aria-label='Действия со строкой' />}
+            {kebabMenu && (
+              <TableCell aria-label='Действия со строкой' sx={headerCellSx} />
+            )}
           </TableRow>
         </TableHead>
 
@@ -217,8 +295,12 @@ export function DesktopTable<T>({
                         }
                       : undefined
                   }
-                  sx={
-                    onRowClick
+                  sx={{
+                    '& > .MuiTableCell-root': {
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+                    },
+
+                    ...(onRowClick
                       ? {
                           cursor: 'pointer',
                           '&:focus-visible': {
@@ -227,8 +309,8 @@ export function DesktopTable<T>({
                             outlineOffset: -2,
                           },
                         }
-                      : undefined
-                  }
+                      : {}),
+                  }}
                 >
                   {selectable && (
                     <TableCell
@@ -254,7 +336,14 @@ export function DesktopTable<T>({
                   ))}
 
                   {kebabMenu && (
-                    <TableCell align='right' sx={{ py: 0, px: 1 }}>
+                    <TableCell
+                      align='right'
+                      sx={{
+                        ...bodyCellSx,
+                        py: 0,
+                        px: 1,
+                      }}
+                    >
                       <RowKebab actions={kebabMenu(row)} />
                     </TableCell>
                   )}

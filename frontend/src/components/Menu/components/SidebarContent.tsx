@@ -1,17 +1,17 @@
-import { Box, Divider, List } from '@mui/material';
-
 import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
 import type { NavItem } from '@/utils/types/navigation';
 import { hasAccess } from '@/utils/types/roles';
+import { Box, Divider, List } from '@mui/material';
 
-import styles from '../Menu.module.css';
 import { MainMenuHeader } from './MainMenuHeader';
 import { MenuNavigationItem } from './MenuNavigationItem';
 import { NotificationMenuItem } from './NotificationMenuItem';
 import { UserMenu } from './UserMenu';
 
+import styles from '../Menu.module.css';
+
 export const RAIL_WIDTH = 64;
-export const FULL_WIDTH = 220;
+export const FULL_WIDTH = 289;
 
 type SidebarContentProps = {
   items: NavItem[];
@@ -22,12 +22,12 @@ type SidebarContentProps = {
   showLabels: boolean;
   isMobile: boolean;
 
-  /** Состояние открытия панели уведомлений. */
   notificationsOpen: boolean;
   onOpenNotifications: () => void;
   onCloseNotifications: () => void;
 
   onNavigate: () => void;
+  onRegister: () => void;
 };
 
 export function SidebarContent({
@@ -41,6 +41,7 @@ export function SidebarContent({
   onOpenNotifications,
   onCloseNotifications,
   onNavigate,
+  onRegister,
 }: SidebarContentProps) {
   const role = useCurrentRole();
 
@@ -51,13 +52,32 @@ export function SidebarContent({
   );
 
   return (
-    <Box className={styles.content}>
+    <Box
+      className={styles.content}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        minHeight: 0,
+        boxSizing: 'border-box',
+      }}
+    >
       <MainMenuHeader title={title} showLabels={showLabels} />
 
       <Divider className={styles.menuDivider} />
 
-      {/* Основные пункты меню */}
-      <List component='div' disablePadding className={styles.body}>
+      <List
+        component='div'
+        disablePadding
+        className={styles.body}
+        sx={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
         <NotificationMenuItem
           open={notificationsOpen}
           onOpen={onOpenNotifications}
@@ -66,6 +86,7 @@ export function SidebarContent({
           expanded={showLabels}
           isMobile={isMobile}
           sidebarWidth={FULL_WIDTH}
+          onRegister={onRegister}
         />
 
         {visibleItems.map((item) => (
@@ -75,18 +96,20 @@ export function SidebarContent({
             rail={rail}
             showLabels={showLabels}
             onNavigate={onNavigate}
+            notificationsOpen={notificationsOpen}
           />
         ))}
       </List>
 
-      {/* Нижние пункты и пользователь */}
       <Box
         sx={{
+          width: '100%',
           mt: 'auto',
           flexShrink: 0,
           px: 1,
           pt: 1,
           pb: 2,
+          boxSizing: 'border-box',
         }}
       >
         <List component='div' disablePadding>
@@ -97,14 +120,11 @@ export function SidebarContent({
               rail={rail}
               showLabels={showLabels}
               onNavigate={onNavigate}
+              notificationsOpen={notificationsOpen}
             />
           ))}
 
-          <UserMenu
-            rail={rail}
-            expanded={showLabels}
-            popupWidth={FULL_WIDTH - 16}
-          />
+          <UserMenu rail={rail} expanded={showLabels} popupWidth={220} />
         </List>
       </Box>
     </Box>

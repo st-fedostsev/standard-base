@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { ActionItem } from '@/utils/types/actions';
+import type { TableSelection } from './selection';
 
 export type SortDir = 'asc' | 'desc';
 
@@ -56,8 +57,9 @@ export type DataTableProps<T> = {
    */
   renderCardMedia?: (row: T) => ReactNode;
 
-  selectedIds?: ReadonlySet<string>;
-  onSelectedIdsChange?: (ids: Set<string>) => void;
+  totalMatchingCount: number;
+  selection: TableSelection;
+  onSelectionChange: (selection: TableSelection) => void;
   massActionsPanel?: (context: MassActionsContext) => ReactNode;
 
   kebabMenu?: (row: T) => ActionItem[];

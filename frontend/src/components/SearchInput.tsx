@@ -1,8 +1,10 @@
 import type { KeyboardEvent } from 'react';
 
-import { IconButton, InputAdornment, TextField } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
+import { IconButton, InputAdornment, TextField } from '@mui/material';
+
+import { fieldSx } from './fieldSx';
 
 type SearchInputProps = {
   value: string;
@@ -37,7 +39,11 @@ export function SearchInput({
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}
-      sx={{ width: fullWidth ? '100%' : DEFAULT_WIDTH, maxWidth: '100%' }}
+      sx={{
+        ...fieldSx,
+        width: fullWidth ? '100%' : DEFAULT_WIDTH,
+        maxWidth: '100%',
+      }}
       slotProps={{
         htmlInput: { 'aria-label': placeholder },
         input: {

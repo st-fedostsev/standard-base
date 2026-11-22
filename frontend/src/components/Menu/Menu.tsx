@@ -1,18 +1,18 @@
 import { useState, type ReactNode } from 'react';
-
-import { Box, Drawer, IconButton, useMediaQuery } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import { useNavigate } from 'react-router';
 
 import { Sticky } from '@/components/Sticky';
-
 import type { NavItem } from '@/utils/types/navigation';
+import MenuIcon from '@mui/icons-material/Menu';
+import { Box, Drawer, IconButton, useMediaQuery } from '@mui/material';
 
-import styles from './Menu.module.css';
 import {
   FULL_WIDTH,
   RAIL_WIDTH,
   SidebarContent,
 } from './components/SidebarContent';
+
+import styles from './Menu.module.css';
 
 type MenuProps = {
   items: NavItem[];
@@ -20,6 +20,8 @@ type MenuProps = {
   title?: string;
   children: ReactNode;
 };
+
+const SIDEBAR_SHADOW = '4px 0 10px 0 rgba(25, 118, 210, 0.2)';
 
 export function Menu({ items, footerItems = [], title, children }: MenuProps) {
   // До 992px — мобильное меню.
@@ -37,6 +39,7 @@ export function Menu({ items, footerItems = [], title, children }: MenuProps) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const navigator = useNavigate();
 
   // В режиме иконок меню остаётся раскрытым, пока открыты уведомления.
   const expanded = !isRail || hovered || focused || notificationsOpen;
@@ -44,6 +47,10 @@ export function Menu({ items, footerItems = [], title, children }: MenuProps) {
   const closeMobileDrawer = () => {
     setDrawerOpen(false);
     setNotificationsOpen(false);
+  };
+
+  const onRegister = () => {
+    navigator('/login');
   };
 
   const sidebarContent = (
@@ -58,6 +65,7 @@ export function Menu({ items, footerItems = [], title, children }: MenuProps) {
       onOpenNotifications={() => setNotificationsOpen(true)}
       onCloseNotifications={() => setNotificationsOpen(false)}
       onNavigate={closeMobileDrawer}
+      onRegister={onRegister}
     />
   );
 
@@ -121,6 +129,8 @@ export function Menu({ items, footerItems = [], title, children }: MenuProps) {
               }}
               sx={{
                 width: expanded ? FULL_WIDTH : RAIL_WIDTH,
+                bgcolor: '#fff',
+                boxShadow: SIDEBAR_SHADOW,
               }}
             >
               {sidebarContent}

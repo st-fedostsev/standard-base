@@ -1,72 +1,84 @@
-import {
-  Box,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-} from '@mui/material';
-import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
-import TableRowsOutlined from '@mui/icons-material/TableRowsOutlined';
+import GridViewRounded from '@mui/icons-material/GridViewRounded';
+import TableRowsRoundedIcon from '@mui/icons-material/TableRowsRounded';
+import { ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
 
 export type ViewMode = 'table' | 'cards';
 
 type ViewSwitcherProps = {
   value: ViewMode;
   onChange: (value: ViewMode) => void;
-
-  /** На узком экране табличный вид недоступен. */
-  compact: boolean;
+  compact?: boolean;
 };
 
-export function ViewSwitcher({ value, onChange, compact }: ViewSwitcherProps) {
+export function ViewSwitcher({
+  value,
+  onChange,
+  compact = false,
+}: ViewSwitcherProps) {
+  const buttonSize = compact ? 40 : 44;
+
   return (
-    <Box
+    <ToggleButtonGroup
+      exclusive
+      value={value}
+      onChange={(_event, nextValue: ViewMode | null) => {
+        // Не даём снять выбор повторным нажатием на активный режим.
+        if (nextValue !== null) {
+          onChange(nextValue);
+        }
+      }}
+      aria-label='Режим отображения материалов'
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        flexWrap: 'wrap',
-        gap: 1,
+        height: buttonSize,
+        overflow: 'hidden',
+        border: '1px solid #C7D0D5',
+        borderRadius: '8px',
+        bgcolor: '#F7FAFA',
+
+        '& .MuiToggleButtonGroup-grouped': {
+          width: buttonSize,
+          height: buttonSize,
+          p: 0,
+          border: 0,
+          borderRadius: 0,
+          color: '#50585A',
+
+          '&:not(:first-of-type)': {
+            borderLeft: '1px solid #C7D0D5',
+          },
+
+          '&:hover': {
+            bgcolor: 'rgba(25, 118, 210, 0.06)',
+          },
+
+          '&.Mui-selected, &.Mui-selected:hover': {
+            color: '#263238',
+            bgcolor: '#D6E8F5',
+          },
+
+          '&.Mui-focusVisible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: -2,
+          },
+        },
+
+        '& .MuiSvgIcon-root': {
+          fontSize: compact ? 21 : 24,
+        },
       }}
     >
-      {compact && (
-        <Typography variant='caption' sx={{ color: 'text.secondary' }}>
-          Карточный вид для узкого экрана
-        </Typography>
-      )}
-
-      <ToggleButtonGroup
-        exclusive
-        size='small'
-        value={value}
-        aria-label='Вид отображения'
-        onChange={(_, next: ViewMode | null) => {
-          // Повторный клик по выбранной кнопке не снимает выбор.
-          if (next !== null) {
-            onChange(next);
-          }
-        }}
-      >
-        <ToggleButton
-          value='table'
-          disabled={compact}
-          aria-label='Таблица'
-          title={
-            compact
-              ? 'Таблица доступна при большей ширине'
-              : 'Показать таблицей'
-          }
-        >
-          <TableRowsOutlined fontSize='small' />
+      <Tooltip title='Таблица'>
+        <ToggleButton value='table' aria-label='Таблица'>
+          <TableRowsRoundedIcon />
         </ToggleButton>
+      </Tooltip>
 
-        <ToggleButton
-          value='cards'
-          aria-label='Карточки'
-          title='Показать карточками'
-        >
-          <GridViewOutlined fontSize='small' />
+      <Tooltip title='Карточки'>
+        <ToggleButton value='cards' aria-label='Карточки'>
+          <GridViewRounded />
         </ToggleButton>
-      </ToggleButtonGroup>
-    </Box>
+      </Tooltip>
+    </ToggleButtonGroup>
   );
 }
