@@ -15,13 +15,16 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { ValidationContainer } from '@/components/containers/ValidationContainer';
 
+import { plural } from '@/utils/common';
+import { formatFileTypes, type FileType } from '@/utils/types/fileTypes';
+
 type FileUploadProps = {
   value: File[];
   onChange: (files: File[]) => void;
+  allowedTypes: readonly FileType[];
+  maxSizeMb: number;
+  maxFiles: number;
   label?: string;
-  hint?: string;
-  maxSizeMb?: number;
-  maxFiles?: number;
   errorText?: string;
   disabled?: boolean;
 };
@@ -30,10 +33,10 @@ type FileUploadProps = {
 export function FileUpload({
   value,
   onChange,
+  allowedTypes,
+  maxSizeMb,
+  maxFiles,
   label = 'Загрузите фотографию',
-  hint = 'SVG, PNG, JPG или GIF (макс. 3 МБ)',
-  maxSizeMb = 3,
-  maxFiles = 10,
   errorText,
   disabled = false,
 }: FileUploadProps) {
@@ -57,7 +60,13 @@ export function FileUpload({
   const maxFilesError =
     maxFiles === 1
       ? 'Можно загрузить только один файл'
-      : `Можно загрузить не больше ${maxFiles} файлов`;
+      : `Можно загрузить максимум ${maxFiles} ${plural(maxFiles, ['файл', 'файла', 'файлов'])}`;
+
+  const typesLabel = formatFileTypes(allowedTypes);
+  const hint = `${typesLabel} (макс. ${maxSizeMb} МБ)`;
+
+  const isAllowedType = (file: File) =>
+    allowedTypes.some((type) => type === file.type);
 
   const addFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
@@ -66,6 +75,10 @@ export function FileUpload({
 
     if (isFull || value.length + incoming.length > maxFiles) {
       setInnerError(maxFilesError);
+      return;
+    }
+    if (incoming.some((file) => !isAllowedType(file))) {
+      setInnerError(`Допустимые форматы: ${typesLabel}`);
       return;
     }
     if (incoming.some((file) => file.size > maxSizeMb * 1024 * 1024)) {
@@ -140,6 +153,7 @@ export function FileUpload({
             component='input'
             ref={inputRef}
             type='file'
+            accept={allowedTypes.join(',')}
             multiple={maxFiles > 1}
             disabled={disabled}
             onChange={handleInput}
