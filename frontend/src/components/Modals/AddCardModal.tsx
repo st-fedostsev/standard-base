@@ -1,7 +1,5 @@
 import { useState, type FormEvent } from 'react';
 
-import { Box, Button, Collapse, Stack, Typography } from '@mui/material';
-
 import { AppForm } from '@/components/AppForm';
 import { FieldRow } from '@/components/FieldRow';
 import { FileUpload } from '@/components/FileUpload';
@@ -9,8 +7,8 @@ import { Input } from '@/components/Input';
 import { ModalLayout } from '@/components/Modals/ModalLayout';
 import { SwitchField } from '@/components/Modals/SwitchField';
 import { Toggle, type ToggleOption } from '@/components/Modals/Toggle';
-
 import { ALL_FILE_TYPES } from '@/utils/types/fileTypes';
+import { Box, Button, Collapse, Stack, Typography } from '@mui/material';
 
 type Visibility = 'public' | 'protected' | 'private';
 
