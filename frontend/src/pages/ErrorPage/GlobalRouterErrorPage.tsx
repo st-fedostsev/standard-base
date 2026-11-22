@@ -6,6 +6,7 @@ import {
 } from 'react-router-dom';
 
 import { Box, Button, Typography } from '@mui/material';
+import { useId } from 'react';
 
 function getErrorContent(error: unknown) {
   if (isRouteErrorResponse(error)) {
@@ -37,7 +38,69 @@ function getErrorContent(error: unknown) {
   };
 }
 
-function ErrorIllustration() {
+export function CircleSlashIllustration() {
+  const maskId = `circle-slash-${useId().replace(/:/g, '')}`;
+
+  return (
+    <Box
+      component='svg'
+      viewBox='0 0 240 240'
+      role='img'
+      aria-label='Ссылка недоступна'
+      sx={{
+        display: 'block',
+        width: 'min(100%, 320px)',
+        height: 'auto',
+        color: 'primary.main',
+      }}
+    >
+      <defs>
+        {/* Разрыв круга в местах, где его пересекает диагональ. */}
+        <mask
+          id={maskId}
+          x='0'
+          y='0'
+          width='240'
+          height='240'
+          maskUnits='userSpaceOnUse'
+        >
+          <rect width='240' height='240' fill='white' />
+          <line
+            x1='20'
+            y1='20'
+            x2='220'
+            y2='220'
+            stroke='black'
+            strokeWidth='14'
+            strokeLinecap='round'
+          />
+        </mask>
+      </defs>
+
+      <circle
+        cx='120'
+        cy='120'
+        r='92'
+        fill='none'
+        stroke='currentColor'
+        strokeWidth='2.5'
+        mask={`url(#${maskId})`}
+      />
+
+      <line
+        x1='20'
+        y1='20'
+        x2='220'
+        y2='220'
+        stroke='currentColor'
+        strokeWidth='2.5'
+        strokeLinecap='round'
+      />
+    </Box>
+  );
+}
+
+export function ErrorIllustration() {
   return (
     <Box
       component='svg'
@@ -197,7 +260,7 @@ export function GlobalRouterErrorPage() {
               },
             }}
           >
-            <ErrorIllustration />
+            <CircleSlashIllustration />
           </Box>
         </Box>
 
