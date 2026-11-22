@@ -20,7 +20,7 @@ export function MenuNavigationItem({
   rail,
   showLabels,
   onNavigate,
-  notificationsOpen
+  notificationsOpen,
 }: MenuNavigationItemProps) {
   const { pathname } = useLocation();
   const Icon = item.icon;

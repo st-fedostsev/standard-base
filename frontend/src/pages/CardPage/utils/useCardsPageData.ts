@@ -1,5 +1,4 @@
 import { api } from '@/utils/api';
-import { MOCK_CARDS, MOCK_CARD_CATEGORIES } from '@/utils/mocks/cards';
 import type {
   CardCategory,
   CardFilters,
@@ -7,13 +6,6 @@ import type {
   GetCardsRequest,
 } from '@/utils/types/cards';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-
-/*
- * В dev используется локальная тестовая выборка.
- * Для проверки backend поменяй на false.
- * В production моки не включаются.
- */
-const USE_MOCK_CARDS = import.meta.env.DEV;
 
 const PAGE_SIZE = 30;
 const NO_CATEGORIES: CardCategory[] = [];
@@ -69,14 +61,8 @@ function createRequest(filters: CardFilters, offset: number): GetCardsRequest {
 
 export function useCardsPageData(filters: CardFilters) {
   const categoriesQuery = useQuery({
-    queryKey: ['card-categories', USE_MOCK_CARDS],
-    queryFn: ({ signal }) => {
-      if (USE_MOCK_CARDS) {
-        return Promise.resolve(MOCK_CARD_CATEGORIES);
-      }
-
-      return api.Cards.getCategories<CardCategory[]>(signal);
-    },
+    queryKey: ['card-categories'],
+    queryFn: ({ signal }) => api.Cards.getCategories<CardCategory[]>(signal),
     meta: {
       globalLoader: true,
     },
@@ -85,7 +71,6 @@ export function useCardsPageData(filters: CardFilters) {
   const cardsQuery = useInfiniteQuery({
     queryKey: [
       'cards',
-      USE_MOCK_CARDS,
       {
         createdFrom: filters.created.from,
         createdTo: filters.created.to,
@@ -99,18 +84,6 @@ export function useCardsPageData(filters: CardFilters) {
     initialPageParam: 0,
 
     queryFn: async ({ pageParam, signal }): Promise<CardsPage> => {
-      if (USE_MOCK_CARDS) {
-        // Даём время проверить loader и подгрузку следующей страницы.
-        await new Promise((resolve) => setTimeout(resolve, 350));
-
-        const page = MOCK_CARDS.slice(pageParam, pageParam + PAGE_SIZE);
-
-        return {
-          rows: page,
-          totalCount: MOCK_CARDS.length,
-        };
-      }
-
       const request = createRequest(filters, pageParam);
       const response = await api.Cards.getList<CardsResponse>(request, signal);
 
