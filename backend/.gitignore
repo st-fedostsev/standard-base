@@ -13,7 +13,9 @@
 
 ### dotenv ###
 .env
-.env.old
+*.env
+*.env.old
+*.env.new
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
