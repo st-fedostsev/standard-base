@@ -1,7 +1,9 @@
-import type { AxiosInstance } from 'axios';
-
+import { CardsApi } from '@/utils/api/cardsApi';
 import { AuthApi } from '@/utils/api/authApi';
 import { createHttpClient } from '@/utils/api/client';
+import type { AxiosInstance } from 'axios';
+
+import { NotificationsApi } from './notificationsApi';
 
 export { ApiError, type ErrorBody } from '@/utils/api/errors';
 export { DEFAULT_TIMEOUT_MS, onAccessError } from '@/utils/api/client';
@@ -20,9 +22,13 @@ export {
  */
 export default class Api {
   public readonly Auth: AuthApi;
+  public readonly Notifications: NotificationsApi;
+  public readonly Cards: CardsApi;
 
   constructor(http: AxiosInstance = createHttpClient()) {
     this.Auth = new AuthApi(http);
+    this.Notifications = new NotificationsApi(http);
+    this.Cards = new CardsApi(http);
   }
 }
 

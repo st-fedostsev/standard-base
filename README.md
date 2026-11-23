@@ -124,7 +124,7 @@ npm run dev
 | `npm run typecheck`    | проверка типов TypeScript  |
 | `npm run structure`    | проверка структуры папок   |
 
-Переменные в `frontend/.env.local` (файл не коммитится):
+Переменные в `frontend/.env` (файл не коммитится):
 
 ```
 HOST=localhost

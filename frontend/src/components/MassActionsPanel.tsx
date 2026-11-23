@@ -1,5 +1,11 @@
 import { useState } from 'react';
 
+import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
+import { type ActionItem } from '@/utils/types/actions';
+import { hasAccess } from '@/utils/types/roles';
+import CheckBoxOutlined from '@mui/icons-material/CheckBoxOutlined';
+import Close from '@mui/icons-material/Close';
+import MoreHoriz from '@mui/icons-material/MoreHoriz';
 import {
   Box,
   Button,
@@ -11,13 +17,6 @@ import {
   MenuItem,
   Typography,
 } from '@mui/material';
-import CheckBoxOutlined from '@mui/icons-material/CheckBoxOutlined';
-import Close from '@mui/icons-material/Close';
-import MoreHoriz from '@mui/icons-material/MoreHoriz';
-
-import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
-import { type ActionItem } from '@/utils/types/actions';
-import { hasAccess } from '@/utils/types/roles';
 
 export type MassAction = ActionItem;
 
@@ -70,7 +69,7 @@ export function MassActionsPanel({
         position: 'fixed',
         bottom: 16,
         // Левый край совпадает с боковым меню: 64px в полосе иконок, 220px в полном меню
-        left: { xs: 0, md: 64, lg: 220 },
+        left: { xs: 0, md: 64, lg: 289 },
         right: 0,
         px: 2,
         display: 'flex',

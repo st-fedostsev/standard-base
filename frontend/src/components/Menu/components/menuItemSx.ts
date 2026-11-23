@@ -1,49 +1,48 @@
 import type { SxProps, Theme } from '@mui/material';
 
-/** Горизонтальные отступы пункта в полном меню и в режиме иконок. */
-export const MENU_ITEM_PX = 2;
+/** Отступы пунктов в полном меню и в режиме иконок. */
+export const MENU_ITEM_PX = 1.5; // 12px
 export const RAIL_ITEM_PX = 1.5;
 
 const itemBase = {
-  // Чуть больше пространства между пунктами.
   minHeight: 44,
-  borderRadius: 1,
+  width: 'calc(100% - 16px)',
+  mx: 1, // по 8px от края меню слева и справа
+  borderRadius: '4px',
   color: '#242424',
 
-  // Общая колонка для иконок, включая аватарку.
   '& .MuiListItemIcon-root': {
     minWidth: 36,
     flexShrink: 0,
     color: 'inherit',
+
+    '& svg': {
+      fontSize: 24,
+    },
   },
 
   '& .MuiListItemText-primary': {
-    fontSize: 14,
-    lineHeight: 1.4,
+    fontSize: 16,
+    fontWeight: 600,
+    lineHeight: 1.5,
+    letterSpacing: '0.15px',
   },
 
-  '& .MuiListItemText-secondary': {
-    fontSize: 12,
-    lineHeight: 1.3,
-  },
-
-  // Наведение и выбранный пункт отличаются друг от друга.
   '@media (hover: hover)': {
     '&:hover': {
-      bgcolor: 'rgba(0, 0, 0, 0.05)',
+      bgcolor: 'rgba(0, 0, 0, 0.04)',
     },
   },
 
   '&.Mui-selected, &.Mui-selected:hover': {
-    bgcolor: 'var(--primary-_states-selected, #1976D214)',
-    color: '#242424',
+    bgcolor: 'rgba(25, 118, 210, 0.08)',
+    color: 'rgba(0, 0, 0, 0.87)',
 
     '& .MuiListItemText-primary': {
-      fontWeight: 600,
+      fontWeight: 700,
     },
   },
 
-  // Фокус должен быть заметен при управлении с клавиатуры.
   '&.Mui-focusVisible': {
     outline: '2px solid',
     outlineColor: 'primary.main',
@@ -57,13 +56,13 @@ const itemBase = {
   },
 } as const;
 
-/** Полное меню, строка пользователя и пункты попапов. */
+/** Полное меню. */
 export const menuItemSx = {
   ...itemBase,
   px: MENU_ITEM_PX,
 } as const;
 
-/** Промежуточное меню только с иконками. */
+/** Меню в режиме иконок. */
 export const railItemSx = {
   ...itemBase,
   px: RAIL_ITEM_PX,
@@ -77,6 +76,10 @@ export const revealSx = (visible: boolean) =>
     whiteSpace: 'nowrap',
     opacity: visible ? 1 : 0,
     transition: visible ? 'opacity 200ms ease 80ms' : 'opacity 100ms ease',
+
+    '@media (prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
   }) as const;
 
 export const menuDividerSx: SxProps<Theme> = {

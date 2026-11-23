@@ -1,26 +1,33 @@
-import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
-import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
-import LibraryBooksOutlined from '@mui/icons-material/LibraryBooksOutlined';
-import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
-import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
-
 import type { NavItem } from '@/utils/types/navigation';
+import PlaylistAddCheck from '@mui/icons-material/PlaylistAddCheck';
+import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
+import HelpOutlined from '@mui/icons-material/HelpOutlined';
+import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
+import HomeOutlined from '@mui/icons-material/HomeOutlined';
+import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
 
 import { ROLES } from './types/roles';
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    id: 'catalog',
-    label: 'Каталог',
+    id: 'main',
+    label: 'Главная',
     to: '/',
-    icon: LibraryBooksOutlined,
+    icon: HomeOutlined,
+    roles: Object.values(ROLES),
+  },
+  {
+    id: 'base',
+    label: 'Стандарты и практики',
+    to: '/base',
+    icon: StickyNote2Outlined,
     roles: Object.values(ROLES),
   },
   {
     id: 'moderation',
     label: 'На согласовании',
     to: '/moderation',
-    icon: FactCheckOutlined,
+    icon: PlaylistAddCheck,
     roles: [ROLES.Author, ROLES.Admin],
   },
   {
@@ -37,14 +44,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: HistoryOutlined,
     roles: [ROLES.Admin],
   },
-];
-
-/** Пункты внизу меню. Выглядят так же, как основные. */
-export const FOOTER_ITEMS: NavItem[] = [
   {
     id: 'docs',
     label: 'Документация',
     href: '#',
-    icon: MenuBookOutlined,
+    icon: HelpOutlined,
   },
 ];
+
+/** Пункты внизу меню. Выглядят так же, как основные. */
+export const FOOTER_ITEMS: NavItem[] = [];

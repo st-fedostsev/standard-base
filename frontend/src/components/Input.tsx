@@ -1,10 +1,9 @@
 import { useId, useState } from 'react';
 
-import { IconButton, InputAdornment, TextField } from '@mui/material';
+import { ValidationContainer } from '@/components/containers/ValidationContainer';
 import VisibilityOffOutlined from '@mui/icons-material/VisibilityOffOutlined';
 import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
-
-import { ValidationContainer } from '@/components/containers/ValidationContainer';
+import { IconButton, InputAdornment, TextField } from '@mui/material';
 
 export type InputProps = {
   /** Подпись поля. Не задана: поле без видимой подписи, нужен ariaLabel. */

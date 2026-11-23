@@ -1,214 +1,100 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useQuery } from '@tanstack/react-query';
-
-import { Button, Chip, Typography } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
-import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
-import SendOutlined from '@mui/icons-material/SendOutlined';
-import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
-
-import { AddCardModal } from '@/components/Modals/AddCardModal';
+import { PageLayout } from '@/App/PageLayout';
+import { DataTable } from '@/components/DataTable';
 import {
-  CellLines,
-  DataTable,
-  SORT_LABELS,
-  type Column,
-} from '@/components/DataTable';
+  createEmptySelection,
+  type TableSelection,
+} from '@/components/DataTable/selection';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterBar } from '@/components/FilterBar';
+import { InfiniteScrollable } from '@/components/InfiniteScrollable/InfiniteScrollable';
 import { MassActionsPanel } from '@/components/MassActionsPanel';
-import { PageLayout } from '@/components/PageLayout';
+import { AddCardModal } from '@/components/Modals/AddCardModal';
 import { PermissionGuard } from '@/components/PermissionGuard';
-
-import { MOCK_CARDS } from '@/utils/mocks/cards';
+import { api } from '@/utils/api';
 import {
-  CARD_CATEGORY_OPTIONS,
-  CARD_STATUS_LABELS,
-  CARD_STATUS_OPTIONS,
   DEFAULT_CARD_FILTERS,
-  type CardAuthor,
   type CardFilters,
   type CardRow,
+  type CreateCardRequest,
 } from '@/utils/types/cards';
-import { isFiltered, type FilterDef } from '@/utils/types/filters';
+import { isFiltered } from '@/utils/types/filters';
 import { ROLES } from '@/utils/types/roles';
+import AddIcon from '@mui/icons-material/Add';
+import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
+import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
+import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
+import { Button, Typography } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 
-// Мок-данные: временно, до появления эндпоинта. Перед коммитом поставьте USE_MOCK = false
-const USE_MOCK = true;
-
-// Общий пустой массив, чтобы useMemo не пересчитывался на каждом рендере
-const NO_CARDS: CardRow[] = [];
-
-const authorName = (a: CardAuthor) => `${a.lastName} ${a.firstName}`;
-
-const columns: Column<CardRow>[] = [
-  {
-    key: 'title',
-    title: 'Название',
-    sortValue: (c) => c.title,
-    sortLabels: SORT_LABELS.text,
-    render: (c) => <CellLines primary={c.title} secondary={`ID ${c.id}`} />,
-  },
-  {
-    key: 'category',
-    title: 'Категория',
-    width: 180,
-    sortValue: (c) => c.category,
-    sortLabels: SORT_LABELS.text,
-    render: (c) => <Typography variant='body2'>{c.category}</Typography>,
-  },
-  {
-    key: 'author',
-    title: 'Автор',
-    width: 260,
-    sortValue: (c) => authorName(c.author),
-    sortLabels: SORT_LABELS.text,
-    render: (c) => (
-      <CellLines
-        primary={authorName(c.author)}
-        secondary={`ID ${c.author.id}`}
-      />
-    ),
-  },
-  {
-    key: 'status',
-    title: 'Статус',
-    width: 200,
-    sortValue: (c) => CARD_STATUS_LABELS[c.status],
-    sortLabels: SORT_LABELS.text,
-    render: (c) => (
-      <Chip
-        size='small'
-        variant='outlined'
-        label={CARD_STATUS_LABELS[c.status]}
-      />
-    ),
-  },
-];
-
-// Отправить можно черновик и возвращённый материал
-const canSendToReview = (card: CardRow) =>
-  card.status === 'draft' || card.status === 'returned';
-
-/**
- * Фильтрация на клиенте. Только для заглушки: с backend фильтры уходят в
- * запрос.
- */
-function filterCards(cards: CardRow[], f: CardFilters): CardRow[] {
-  const q = f.search.trim().toLowerCase();
-  const { from, to } = f.created;
-  return cards.filter((c) => {
-    const day = c.createAt.slice(0, 10);
-    return (
-      (q === '' || c.title.toLowerCase().includes(q)) &&
-      (f.status.length === 0 || f.status.includes(c.status)) &&
-      (f.category === 'all' || c.category === f.category) &&
-      (f.authorId === 'all' || c.author.id === f.authorId) &&
-      (from === '' || day >= from) &&
-      (to === '' || day <= to)
-    );
-  });
-}
+import { CARD_COLUMNS } from './utils/cardColumns';
+import { createCardFilterDefs } from './utils/cardFilterDefs';
+import { filterCards } from './utils/filterCards';
+import { useCardsPageData } from './utils/useCardsPageData';
 
 export function CardsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [selection, setSelection] =
+    useState<TableSelection>(createEmptySelection);
   const [addCardOpen, setAddCardOpen] = useState(false);
 
   const {
-    data: cards = NO_CARDS,
-    isPending,
-    isError,
-  } = useQuery<CardRow[]>({
-    queryKey: ['cards'],
-    queryFn: async () => {
-      if (USE_MOCK) {
-        // Задержка нужна, чтобы увидеть скелетоны загрузки
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        return MOCK_CARDS;
-      }
-      // TODO: запрос к backend. Фильтры передать в параметры и добавить в queryKey
-      return [];
-    },
-  });
+    cards,
+    categories,
+    authors,
+    totalCount,
+    hasNextPage,
+    isInitialLoading,
+    isInitialError,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage,
+    refetch,
+  } = useCardsPageData(filters);
 
-  const rows = useMemo(() => filterCards(cards, filters), [cards, filters]);
-
-  // Авторы для фильтра: уникальные из загруженных данных. С backend придёт справочник
-  const authors = useMemo(() => {
-    const byId = new Map<string, CardAuthor>();
-    cards.forEach((c) => byId.set(c.author.id, c.author));
-    return [...byId.values()].sort((a, b) =>
-      authorName(a).localeCompare(authorName(b), 'ru')
-    );
-  }, [cards]);
-
-  const selectedRows = useMemo(
-    () => cards.filter((c) => selected.has(c.id)),
-    [cards, selected]
+  const rows = useMemo(
+    () => filterCards(cards, filters, categories),
+    [cards, filters, categories]
   );
-  const allSendable =
-    selectedRows.length > 0 && selectedRows.every(canSendToReview);
 
-  // Выбор привязан к видимым строкам: любое изменение фильтра его сбрасывает
   const changeFilters = (next: CardFilters) => {
     setFilters(next);
-    setSelected(new Set());
+    setSelection(createEmptySelection());
+  };
+
+  const onSubmit = async (
+    payload: CreateCardRequest,
+    photo: File | null
+  ): Promise<void> => {
+    await api.Cards.create(payload, photo);
+    await queryClient.invalidateQueries({ queryKey: ['cards'] });
+    setSelection(createEmptySelection());
   };
 
   const hasFilters = isFiltered(filters, DEFAULT_CARD_FILTERS);
 
-  // Отправка на согласование для набора id. Эти строки снимаются из выбора
-  const sendToReview = (ids: string[]) => {
-    // TODO: запрос к backend, например POST /api/cards/send-to-review с ids
-    setSelected((prev) => new Set([...prev].filter((id) => !ids.includes(id))));
-  };
+  const filterDefs = useMemo(
+    () => createCardFilterDefs(categories, authors),
+    [categories, authors]
+  );
 
-  // Порядок полей на панели задаёт порядок этого массива
-  const filterDefs: FilterDef[] = [
-    {
-      type: 'dateRange',
-      key: 'created',
-      fromLabel: 'Создано с',
-      toLabel: 'по',
-    },
-    { type: 'search', key: 'search', placeholder: 'Поиск по названию' },
-    {
-      type: 'multiselect',
-      key: 'status',
-      label: 'Статус',
-      options: CARD_STATUS_OPTIONS,
-      width: 220,
-    },
-    {
-      type: 'select',
-      key: 'category',
-      label: 'Категория',
-      allLabel: 'Все категории',
-      options: CARD_CATEGORY_OPTIONS,
-    },
-    {
-      type: 'select',
-      key: 'authorId',
-      label: 'Автор',
-      allLabel: 'Все авторы',
-      options: authors.map((a) => ({ value: a.id, label: authorName(a) })),
-      roles: [ROLES.Admin],
-    },
-  ];
+  const countLabel = hasFilters
+    ? `Найдено: ${rows.length}`
+    : `Материалов: ${totalCount}`;
 
-  const counter = hasFilters
-    ? `Найдено: ${rows.length} из ${cards.length}`
-    : `Материалов: ${cards.length}`;
+  const isPageEmpty =
+    !isInitialLoading && !isInitialError && !hasNextPage && rows.length === 0;
 
   const emptyState = hasFilters ? (
     <EmptyState
       icon={SearchOffOutlined}
-      description='По выбранным условиям ничего не найдено. Измените фильтры или сбросьте их.'
+      description='По выбранным условиям карточек нет. Измените фильтры или сбросьте их.'
       action={
         <Button
           variant='text'
@@ -221,7 +107,8 @@ export function CardsPage() {
   ) : (
     <EmptyState
       icon={DescriptionOutlined}
-      description='Здесь будут ваши материалы. Создайте первый, чтобы начать.'
+      title='Таблица пуста'
+      description='Создайте или импортируйте первую карточку.'
       action={
         <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
           <Button
@@ -229,89 +116,147 @@ export function CardsPage() {
             startIcon={<AddIcon />}
             onClick={() => setAddCardOpen(true)}
           >
-            Создать материал
+            Создать
           </Button>
         </PermissionGuard>
       }
     />
   );
 
+  const retryNextPage = () => fetchNextPage().then(() => undefined);
+
   return (
-    <PageLayout
-      title='Карточки'
-      subtitle={isPending ? undefined : counter}
-      actions={
-        <PermissionGuard allowed={[ROLES.Guest, ROLES.Author, ROLES.Admin]}>
-          <Button
-            variant='contained'
-            startIcon={<AddIcon />}
-            onClick={() => setAddCardOpen(true)}
-          >
-            Создать материал
-          </Button>
-        </PermissionGuard>
-      }
-      filters={
-        <FilterBar
-          defs={filterDefs}
-          value={filters}
-          defaults={DEFAULT_CARD_FILTERS}
-          onChange={changeFilters}
-        />
-      }
-    >
-      <DataTable
-        columns={columns}
-        rows={rows}
-        getRowId={(c) => c.id}
-        selectedIds={selected}
-        onSelectedIdsChange={setSelected}
-        onRowClick={(c) => navigate(`/cards/${c.id}`)}
-        massActionsPanel={({ count, selectAll, clear }) => (
-          <MassActionsPanel
-            count={count}
-            onClear={clear}
-            onSelectAll={selectAll}
-            actions={[
+    <>
+      <PageLayout
+        title='Стандарты и практики'
+        isLoading={isInitialLoading}
+        isError={isInitialError}
+        errorTitle='Не удалось загрузить карточки'
+        errorDescription='Проверьте соединение и попробуйте снова.'
+        onRetry={() => void refetch()}
+        isRetrying={isInitialLoading}
+        isEmpty={isPageEmpty}
+        emptyState={emptyState}
+        actions={
+          <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
+            <>
+              <Button
+                variant='contained'
+                startIcon={<FileUploadOutlined />}
+                // TODO: подключить импорт файла.
+                sx={{
+                  px: 2,
+                  py: '6px',
+                  minHeight: 36,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  lineHeight: '24px',
+                  letterSpacing: '0.4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Импортировать
+              </Button>
+
+              <Button
+                variant='contained'
+                startIcon={<AddIcon />}
+                onClick={() => setAddCardOpen(true)}
+                sx={{
+                  px: 2,
+                  py: '6px',
+                  minHeight: 36,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  lineHeight: '24px',
+                  letterSpacing: '0.4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Создать
+              </Button>
+            </>
+          </PermissionGuard>
+        }
+        filters={
+          <FilterBar
+            defs={filterDefs}
+            value={filters}
+            defaults={DEFAULT_CARD_FILTERS}
+            onChange={changeFilters}
+          />
+        }
+      >
+        <InfiniteScrollable
+          hasMore={hasNextPage}
+          isLoadingMore={isFetchingNextPage}
+          onLoadMore={() => fetchNextPage().then(() => undefined)}
+          loadMoreError={isFetchNextPageError}
+          onRetry={retryNextPage}
+        >
+          <DataTable<CardRow>
+            toolbarStart={
+              !isInitialLoading ? (
+                <Typography
+                  variant='subtitle1'
+                  sx={{ fontWeight: 600, fontSize: 18 }}
+                >
+                  {countLabel}
+                </Typography>
+              ) : null
+            }
+            columns={CARD_COLUMNS}
+            rows={rows}
+            getRowId={(card) => card.id}
+            totalMatchingCount={rows.length}
+            selection={selection}
+            onSelectionChange={setSelection}
+            onRowClick={(card) => navigate(`/cards/${card.id}`)}
+            massActionsPanel={({ count, selectAll, clear }) => (
+              <MassActionsPanel
+                count={count}
+                onClear={clear}
+                onSelectAll={selectAll}
+                actions={[
+                  {
+                    id: 'export-selected',
+                    label: 'Экспортировать выбранное',
+                    icon: FileDownloadOutlined,
+                    disabled: true,
+                    onClick: () => {
+                      // TODO: подключить экспорт выбранных карточек.
+                    },
+                  },
+                ]}
+              />
+            )}
+            kebabMenu={(card) => [
               {
-                id: 'send',
-                label: 'Хз че писать пока',
-                icon: SendOutlined,
-                disabled: !allSendable,
-                onClick: () => sendToReview([...selected]),
+                id: 'open',
+                label: 'Открыть',
+                icon: DescriptionOutlined,
+                onClick: () => navigate(`/cards/${card.id}`),
+              },
+              {
+                id: 'export-card',
+                label: 'Экспортировать карточку',
+                icon: FileDownloadOutlined,
+                disabled: true,
+                onClick: () => {
+                  // TODO: подключить экспорт карточки.
+                },
               },
             ]}
           />
-        )}
-        kebabMenu={(c) => [
-          {
-            id: 'open',
-            label: 'Открыть',
-            icon: VisibilityOutlined,
-            onClick: () => navigate(`/cards/${c.id}`),
-          },
-          {
-            id: 'send',
-            label: 'Хз че писать пока',
-            icon: SendOutlined,
-            roles: [ROLES.Author, ROLES.Admin],
-            disabled: !canSendToReview(c),
-            onClick: () => sendToReview([c.id]),
-          },
-        ]}
-        isLoading={isPending}
-        errorText={
-          isError ? 'Не удалось загрузить данные. Попробуйте позже' : undefined
-        }
-        empty={emptyState}
-      />
+        </InfiniteScrollable>
+      </PageLayout>
 
       <AddCardModal
         open={addCardOpen}
         onClose={() => setAddCardOpen(false)}
-        // Пока без сохранения: после проверки формы просто закрываем окно
-        onSubmit={() => setAddCardOpen(false)}
+        categories={categories}
+        onSubmit={onSubmit}
       />
-    </PageLayout>
+    </>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useAuth } from '@/utils/hooks/useAuth';
+import { ROLE_LABELS } from '@/utils/types/roles';
 import {
   Avatar,
   Divider,
@@ -10,9 +12,6 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
-
-import { useAuth } from '@/utils/hooks/useAuth';
-import { ROLE_LABELS } from '@/utils/types/roles';
 
 import { menuDividerSx, menuItemSx, railItemSx, revealSx } from './menuItemSx';
 
@@ -50,7 +49,6 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
   const close = () => {
     setIsOpen(false);
 
-    // Возвращаем фокус без прокрутки страницы к кнопке аватарки.
     requestAnimationFrame(() => {
       if (anchor?.isConnected) {
         anchor.focus({ preventScroll: true });
@@ -58,14 +56,12 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
     });
   };
 
-  // Закрываем попап при прокрутке страницы или вложенного контейнера.
   useEffect(() => {
     if (!isOpen) return;
 
     const handleScroll = (event: Event) => {
       const menuElement = document.getElementById(menuId);
 
-      // Прокрутка внутри самого попапа не закрывает его.
       if (event.target instanceof Node && menuElement?.contains(event.target)) {
         return;
       }
@@ -106,7 +102,34 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
   return (
     <>
       <ListItemButton
-        sx={rail ? railItemSx : menuItemSx}
+        sx={{
+          ...(rail ? railItemSx : menuItemSx),
+
+          // Родительский блок уже имеет горизонтальные отступы.
+          // Не добавляем к ним ещё одни.
+          width: '100%',
+          mx: 0,
+
+          // Одинаковый внутренний отступ в обоих режимах.
+          px: 1.5,
+
+          display: 'grid',
+          gridTemplateColumns: '36px minmax(0, 1fr)',
+          alignItems: 'center',
+          columnGap: 0,
+
+          '& .MuiListItemIcon-root': {
+            gridColumn: 1,
+            minWidth: 36,
+            width: 36,
+            m: 0,
+          },
+
+          '& .MuiListItemText-root': {
+            gridColumn: 2,
+            minWidth: 0,
+          },
+        }}
         selected={isOpen}
         aria-label='Меню пользователя'
         aria-haspopup='menu'
@@ -118,7 +141,12 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
           setIsOpen(true);
         }}
       >
-        <ListItemIcon>
+        <ListItemIcon
+          sx={{
+            minWidth: 36,
+            flexShrink: 0,
+          }}
+        >
           <Avatar
             src={user?.avatarUrl ?? undefined}
             alt=''
@@ -138,7 +166,6 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
           sx={revealSx(expanded)}
         />
       </ListItemButton>
-
       <Menu
         id={menuId}
         anchorEl={anchor}
