@@ -18,7 +18,6 @@ import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
 
 import { fieldSx } from './fieldSx';
 
-
 type FilterBarProps<T extends FilterValues> = {
   defs: FilterDef[];
 
