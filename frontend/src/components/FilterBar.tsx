@@ -18,6 +18,8 @@ import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
 
 import { fieldSx } from './fieldSx';
 
+import fieldStyles from '@/components/FilterField.module.css';
+
 type FilterBarProps<T extends FilterValues> = {
   defs: FilterDef[];
 

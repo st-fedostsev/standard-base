@@ -17,7 +17,6 @@ import { api } from '@/utils/api';
 import {
   DEFAULT_CARD_FILTERS,
   type CardFilters,
-  type CardRow,
   type CreateCardRequest,
 } from '@/utils/types/cards';
 import { isFiltered } from '@/utils/types/filters';
@@ -62,6 +61,8 @@ export function CardsPage() {
     () => filterCards(cards, filters, categories),
     [cards, filters, categories]
   );
+
+  type CardRowData = (typeof rows)[number];
 
   const changeFilters = (next: CardFilters) => {
     setFilters(next);
@@ -194,7 +195,7 @@ export function CardsPage() {
           loadMoreError={isFetchNextPageError}
           onRetry={retryNextPage}
         >
-          <DataTable<CardRow>
+          <DataTable<CardRowData>
             toolbarStart={
               !isInitialLoading ? (
                 <Typography
