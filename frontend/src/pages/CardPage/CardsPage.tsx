@@ -13,7 +13,13 @@ import { InfiniteScrollable } from '@/components/InfiniteScrollable/InfiniteScro
 import { MassActionsPanel } from '@/components/MassActionsPanel';
 import { AddCardModal } from '@/components/Modals/AddCardModal';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { DEFAULT_CARD_FILTERS, type CardFilters } from '@/utils/types/cards';
+import { api } from '@/utils/api';
+import {
+  DEFAULT_CARD_FILTERS,
+  type CardFilters,
+  type CardRow,
+  type CreateCardRequest,
+} from '@/utils/types/cards';
 import { isFiltered } from '@/utils/types/filters';
 import { ROLES } from '@/utils/types/roles';
 import AddIcon from '@mui/icons-material/Add';
@@ -22,6 +28,7 @@ import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
 import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
 import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
 import { Button, Typography } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { CARD_COLUMNS } from './utils/cardColumns';
 import { createCardFilterDefs } from './utils/cardFilterDefs';
@@ -30,6 +37,7 @@ import { useCardsPageData } from './utils/useCardsPageData';
 
 export function CardsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
   const [selection, setSelection] =
@@ -55,10 +63,17 @@ export function CardsPage() {
     [cards, filters, categories]
   );
 
-  type CardRow = (typeof rows)[number];
-
   const changeFilters = (next: CardFilters) => {
     setFilters(next);
+    setSelection(createEmptySelection());
+  };
+
+  const onSubmit = async (
+    payload: CreateCardRequest,
+    photo: File | null
+  ): Promise<void> => {
+    await api.Cards.create(payload, photo);
+    await queryClient.invalidateQueries({ queryKey: ['cards'] });
     setSelection(createEmptySelection());
   };
 
@@ -128,7 +143,7 @@ export function CardsPage() {
               <Button
                 variant='contained'
                 startIcon={<FileUploadOutlined />}
-                //TODO импортируем файл onClick={}
+                // TODO: подключить импорт файла.
                 sx={{
                   px: 2,
                   py: '6px',
@@ -193,7 +208,7 @@ export function CardsPage() {
             columns={CARD_COLUMNS}
             rows={rows}
             getRowId={(card) => card.id}
-            totalMatchingCount={totalCount}
+            totalMatchingCount={rows.length}
             selection={selection}
             onSelectionChange={setSelection}
             onRowClick={(card) => navigate(`/cards/${card.id}`)}
@@ -235,11 +250,12 @@ export function CardsPage() {
           />
         </InfiniteScrollable>
       </PageLayout>
+
       <AddCardModal
         open={addCardOpen}
         onClose={() => setAddCardOpen(false)}
-        // Пока форма только проверяется: сохранение карточки не подключено.
-        onSubmit={() => setAddCardOpen(false)}
+        categories={categories}
+        onSubmit={onSubmit}
       />
     </>
   );

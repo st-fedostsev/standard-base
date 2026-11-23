@@ -51,7 +51,7 @@ type NotificationActionFields = {
 const PANEL_WIDTH = 360;
 const NOTIFICATION_ROW_HEIGHT = 144;
 const MAX_PAGE_SIZE = 20;
-const SIDEBAR_GAP = 1;
+const SIDEBAR_GAP = 0;
 
 function getInternalPath(value: string | null | undefined): string | null {
   if (!value) return null;

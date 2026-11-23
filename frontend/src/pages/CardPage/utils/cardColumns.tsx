@@ -18,10 +18,10 @@ export const CARD_COLUMNS: Column<CardRow>[] = [
     key: 'category',
     title: 'Категория',
     width: 180,
-    sortValue: (card) => card.category,
+    sortValue: (card) => card.category.name,
     sortLabels: SORT_LABELS.text,
     render: (card) => (
-      <Chip size='small' variant='filled' label={card.category} />
+      <Chip size='small' variant='filled' label={card.category.name} />
     ),
   },
   {

@@ -1,59 +1,37 @@
 import { api } from '@/utils/api';
-import type {
-  CardCategory,
-  CardFilters,
-  CardRow,
-  GetCardsRequest,
+import {
+  CARD_STATUS_LABELS,
+  type CardCategory,
+  type CardFilters,
+  type CardRow,
+  type CardStatus,
+  type GetCardsRequest,
 } from '@/utils/types/cards';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 const PAGE_SIZE = 30;
 const NO_CATEGORIES: CardCategory[] = [];
 
-type CardsResponse =
-  | CardRow[]
-  | {
-      result?: number;
-      data: CardRow[];
-    };
-
 type CardsPage = {
   rows: CardRow[];
-  totalCount?: number;
 };
 
-function normalizeCardsResponse(response: CardsResponse): CardsPage {
-  if (Array.isArray(response)) {
-    return {
-      rows: response,
-      totalCount: response.length,
-    };
-  }
-
-  if (response && Array.isArray(response.data)) {
-    return {
-      rows: response.data,
-      totalCount:
-        typeof response.result === 'number'
-          ? response.result
-          : response.data.length,
-    };
-  }
-
-  throw new Error('Неожиданный формат ответа /cards/get');
+function isCardStatus(value: string): value is CardStatus {
+  return Object.prototype.hasOwnProperty.call(CARD_STATUS_LABELS, value);
 }
 
 function createRequest(filters: CardFilters, offset: number): GetCardsRequest {
+  const selectedStatus =
+    filters.status.length === 1 && isCardStatus(filters.status[0])
+      ? filters.status[0]
+      : null;
+
   return {
     created_from: filters.created.from || null,
     created_to: filters.created.to || null,
     title: filters.search.trim() || null,
-
-    // API принимает одно значение. Мультивыбор остальных статусов
-    // фильтруется на клиенте по загруженным страницам.
-    status: filters.status.length === 1 ? filters.status[0] : null,
+    status: selectedStatus,
     category: filters.category.length === 1 ? filters.category[0] : null,
-
     limit: PAGE_SIZE,
     offset,
   };
@@ -62,7 +40,7 @@ function createRequest(filters: CardFilters, offset: number): GetCardsRequest {
 export function useCardsPageData(filters: CardFilters) {
   const categoriesQuery = useQuery({
     queryKey: ['card-categories'],
-    queryFn: ({ signal }) => api.Cards.getCategories<CardCategory[]>(signal),
+    queryFn: ({ signal }) => api.Cards.getCategories(signal),
     meta: {
       globalLoader: true,
     },
@@ -85,24 +63,19 @@ export function useCardsPageData(filters: CardFilters) {
 
     queryFn: async ({ pageParam, signal }): Promise<CardsPage> => {
       const request = createRequest(filters, pageParam);
-      const response = await api.Cards.getList<CardsResponse>(request, signal);
+      const rows = await api.Cards.getList(request, signal);
 
-      return normalizeCardsResponse(response);
+      return { rows };
     },
 
+    // GET /cards/get возвращает массив без общего количества.
+    // Поэтому продолжаем загрузку, пока приходит полная страница.
     getNextPageParam: (lastPage, allPages) => {
-      const loadedCount = allPages.reduce(
-        (sum, page) => sum + page.rows.length,
-        0
-      );
-
-      if (lastPage.totalCount !== undefined) {
-        return loadedCount < lastPage.totalCount ? loadedCount : undefined;
+      if (lastPage.rows.length < PAGE_SIZE) {
+        return undefined;
       }
 
-      // Если backend не возвращает totalCount:
-      // полная страница — проверяем следующую, неполная — конец списка.
-      return lastPage.rows.length === PAGE_SIZE ? loadedCount : undefined;
+      return allPages.reduce((count, page) => count + page.rows.length, 0);
     },
 
     meta: {
@@ -114,21 +87,21 @@ export function useCardsPageData(filters: CardFilters) {
   const cards = pages.flatMap((page) => page.rows);
   const categories = categoriesQuery.data ?? NO_CATEGORIES;
 
-  const totalCount =
-    pages.find((page) => page.totalCount !== undefined)?.totalCount ??
-    cards.length;
-
   const authorsById = new Map<string, CardRow['author']>();
 
   for (const card of cards) {
-    authorsById.set(card.author.id, card.author);
+    if (card.author?.id) {
+      authorsById.set(card.author.id, card.author);
+    }
   }
 
   return {
     cards,
     categories,
     authors: [...authorsById.values()],
-    totalCount,
+
+    // Это число уже загруженных строк, не общий count с сервера.
+    totalCount: cards.length,
 
     hasNextPage: cardsQuery.hasNextPage ?? false,
     isInitialLoading: cardsQuery.isPending || categoriesQuery.isPending,

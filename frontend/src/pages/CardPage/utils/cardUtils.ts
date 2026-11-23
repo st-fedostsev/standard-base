@@ -5,7 +5,9 @@ import {
 } from '@/utils/types/cards';
 
 export function getCardAuthorName(author: CardAuthor): string {
-  return `${author.lastName} ${author.firstName}`;
+  return [author.last_name, author.first_name, author.patronymic]
+    .filter(Boolean)
+    .join(' ');
 }
 
 export function canSendCardToReview(card: CardRow): boolean {
@@ -18,7 +20,7 @@ export function getCardSortValue(card: CardRow, key: string): string | number {
       return card.title;
 
     case 'category':
-      return card.category;
+      return card.category.name;
 
     case 'author':
       return getCardAuthorName(card.author);
@@ -27,7 +29,7 @@ export function getCardSortValue(card: CardRow, key: string): string | number {
       return CARD_STATUS_LABELS[card.status];
 
     case 'created':
-      return new Date(card.createAt).getTime();
+      return new Date(card.created_at).getTime();
 
     default:
       return '';

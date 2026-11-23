@@ -7,10 +7,25 @@ import { Input } from '@/components/Input';
 import { ModalLayout } from '@/components/Modals/ModalLayout';
 import { SwitchField } from '@/components/Modals/SwitchField';
 import { Toggle, type ToggleOption } from '@/components/Modals/Toggle';
+import type {
+  CardCategory,
+  CardResult,
+  CardVisibility,
+  CreateCardRequest,
+} from '@/utils/types/cards';
 import { ALL_FILE_TYPES } from '@/utils/types/fileTypes';
-import { Box, Button, Collapse, Stack, Typography } from '@mui/material';
-
-type Visibility = 'public' | 'protected' | 'private';
+import {
+  Box,
+  Button,
+  Collapse,
+  FormControl,
+  FormHelperText,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from '@mui/material';
 
 type MetricPair = {
   title: string;
@@ -19,13 +34,12 @@ type MetricPair = {
   after: string;
 };
 
-/** Значения формы. */
 type FormValues = {
-  visibility: Visibility;
+  visibility: CardVisibility;
   title: string;
   personalFlow: string;
   industry: string;
-  mainResult: string;
+  categoryId: string;
   metrics: MetricPair[];
   events: string[];
   files: File[];
@@ -41,12 +55,19 @@ type FormErrors = {
   title?: string;
   personalFlow?: string;
   industry?: string;
-  mainResult?: string;
+  categoryId?: string;
   events?: Array<string | undefined>;
   metrics?: MetricErrors[];
 };
 
-const VISIBILITY_OPTIONS: ToggleOption<Visibility>[] = [
+type AddCardModalProps = {
+  open: boolean;
+  onClose: () => void;
+  categories: CardCategory[];
+  onSubmit: (payload: CreateCardRequest, photo: File | null) => Promise<void>;
+};
+
+const VISIBILITY_OPTIONS: ToggleOption<CardVisibility>[] = [
   { value: 'public', label: 'ПУБЛИЧНАЯ' },
   { value: 'protected', label: 'ЗАЩИЩЁННАЯ' },
   { value: 'private', label: 'ПРИВАТНАЯ' },
@@ -55,21 +76,23 @@ const VISIBILITY_OPTIONS: ToggleOption<Visibility>[] = [
 const METRIC_PAIRS_COUNT = 3;
 const MAX_EVENTS = 10;
 
-const EMPTY_FORM: FormValues = {
-  visibility: 'public',
-  title: '',
-  personalFlow: '',
-  industry: '',
-  mainResult: '',
-  metrics: Array.from({ length: METRIC_PAIRS_COUNT }, () => ({
+function createEmptyForm(): FormValues {
+  return {
+    visibility: 'public',
     title: '',
-    enabled: false,
-    before: '',
-    after: '',
-  })),
-  events: [''],
-  files: [],
-};
+    personalFlow: '',
+    industry: '',
+    categoryId: '',
+    metrics: Array.from({ length: METRIC_PAIRS_COUNT }, () => ({
+      title: '',
+      enabled: false,
+      before: '',
+      after: '',
+    })),
+    events: [''],
+    files: [],
+  };
+}
 
 /** Оставляет цифры и один десятичный разделитель. */
 function sanitizeDecimal(value: string): string {
@@ -87,76 +110,133 @@ function sanitizeDecimal(value: string): string {
   return `${integerPart}${separator}${fractionPart}`;
 }
 
-/** Значение заполнено, если в нём есть хотя бы одна цифра. */
-function hasMetricValue(value: string): boolean {
-  return /\d/.test(value);
+function parseMetricNumber(value: string): number | null {
+  const normalized = sanitizeDecimal(value).replace(',', '.');
+
+  if (!normalized) {
+    return null;
+  }
+
+  const number = Number(normalized);
+
+  return Number.isFinite(number) ? number : null;
 }
 
-/** Проверка формы. */
+function hasMetricContent(metric: MetricPair): boolean {
+  return Boolean(
+    metric.title.trim() || metric.before.trim() || metric.after.trim()
+  );
+}
+
 function validate(values: FormValues): FormErrors {
   const errors: FormErrors = {};
 
-  if (values.title.trim() === '') {
+  if (!values.title.trim()) {
     errors.title = 'Укажите заголовок';
   }
-  if (values.personalFlow.trim() === '') {
+
+  if (!values.personalFlow.trim()) {
     errors.personalFlow = 'Укажите показатель личного потока';
   }
-  if (values.industry.trim() === '') {
+
+  if (!values.industry.trim()) {
     errors.industry = 'Укажите отрасль';
   }
-  if (values.mainResult.trim() === '') {
-    errors.mainResult = 'Опишите основной результат';
+
+  if (!values.categoryId) {
+    errors.categoryId = 'Выберите категорию';
   }
 
-  const events = values.events.map((event, index) =>
-    index === 0 && event.trim() === '' ? 'Опишите мероприятие' : undefined
-  );
-
-  if (events.some(Boolean)) {
-    errors.events = events;
+  if (!values.events.some((event) => event.trim())) {
+    errors.events = values.events.map((event, index) =>
+      index === 0 && !event.trim() ? 'Опишите мероприятие' : undefined
+    );
   }
 
-  const metrics = values.metrics.map((pair) => {
+  const metricErrors = values.metrics.map((metric) => {
     const pairErrors: MetricErrors = {};
 
-    if (pair.title.trim() === '') {
-      pairErrors.title = 'Напишите заголовок';
+    // Полностью пустой показатель необязателен.
+    if (!hasMetricContent(metric)) {
       return pairErrors;
     }
 
-    if (!hasMetricValue(pair.before)) {
-      pairErrors.before = 'Укажите значение «Было»';
+    if (!metric.title.trim()) {
+      pairErrors.title = 'Укажите название показателя';
     }
-    if (!hasMetricValue(pair.after)) {
-      pairErrors.after = 'Укажите значение «Стало»';
+
+    if (parseMetricNumber(metric.before) === null) {
+      pairErrors.before = 'Укажите числовое значение «Было»';
+    }
+
+    if (parseMetricNumber(metric.after) === null) {
+      pairErrors.after = 'Укажите числовое значение «Стало»';
     }
 
     return pairErrors;
   });
 
-  if (metrics.some((pair) => pair.title || pair.before || pair.after)) {
-    errors.metrics = metrics;
+  if (
+    metricErrors.some((metric) => metric.title || metric.before || metric.after)
+  ) {
+    errors.metrics = metricErrors;
   }
 
   return errors;
 }
 
-type AddCardModalProps = {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (values: FormValues) => void;
-};
+function toCreateCardRequest(values: FormValues): CreateCardRequest {
+  const results: CardResult[] = values.metrics
+    .filter(hasMetricContent)
+    .map((metric) => {
+      const before = parseMetricNumber(metric.before);
+      const after = parseMetricNumber(metric.after);
 
-export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
-  const [values, setValues] = useState<FormValues>(EMPTY_FORM);
+      // До этой функции форма проходит validate.
+      if (!metric.title.trim() || before === null || after === null) {
+        throw new Error('Некорректно заполнен показатель');
+      }
+
+      return {
+        title: metric.title.trim(),
+        before,
+        after,
+        is_positive: metric.enabled,
+      };
+    });
+
+  return {
+    title: values.title.trim(),
+    industry: values.industry.trim(),
+    pilot_stream: values.personalFlow.trim(),
+    results,
+    activities: values.events.map((event) => event.trim()).filter(Boolean),
+    category_id: values.categoryId,
+    visibility: values.visibility,
+  };
+}
+
+export function AddCardModal({
+  open,
+  onClose,
+  categories,
+  onSubmit,
+}: AddCardModalProps) {
+  const [values, setValues] = useState<FormValues>(createEmptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showErrors, setShowErrors] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const applyValues = (next: FormValues) => {
     setValues(next);
+
     if (showErrors) {
       setErrors(validate(next));
+    }
+
+    if (submitError) {
+      setSubmitError(null);
     }
   };
 
@@ -170,8 +250,8 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
   const updateMetricTitle = (index: number, title: string) => {
     applyValues({
       ...values,
-      metrics: values.metrics.map((pair, i) =>
-        i === index ? { ...pair, title } : pair
+      metrics: values.metrics.map((metric, currentIndex) =>
+        currentIndex === index ? { ...metric, title } : metric
       ),
     });
   };
@@ -183,14 +263,20 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
   ) => {
     applyValues({
       ...values,
-      metrics: values.metrics.map((pair, i) => {
-        if (i !== index) {
-          return pair;
+      metrics: values.metrics.map((metric, currentIndex) => {
+        if (currentIndex !== index) {
+          return metric;
         }
 
-        const next = { ...pair, [key]: sanitizeDecimal(value) };
+        const next = {
+          ...metric,
+          [key]: sanitizeDecimal(value),
+        };
 
-        if (!hasMetricValue(next.before) || !hasMetricValue(next.after)) {
+        if (
+          parseMetricNumber(next.before) === null ||
+          parseMetricNumber(next.after) === null
+        ) {
           next.enabled = false;
         }
 
@@ -202,26 +288,27 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
   const updateMetricSwitch = (index: number, enabled: boolean) => {
     applyValues({
       ...values,
-      metrics: values.metrics.map((pair, i) =>
-        i === index ? { ...pair, enabled } : pair
+      metrics: values.metrics.map((metric, currentIndex) =>
+        currentIndex === index ? { ...metric, enabled } : metric
       ),
     });
   };
 
   const updateEvent = (index: number, value: string) => {
-    const events = values.events.map((event, i) =>
-      i === index ? value : event
+    const events = values.events.map((event, currentIndex) =>
+      currentIndex === index ? value : event
     );
+
     const isLast = index === values.events.length - 1;
 
-    if (isLast && value.trim() !== '' && events.length < MAX_EVENTS) {
+    if (isLast && value.trim() && events.length < MAX_EVENTS) {
       events.push('');
     }
 
     while (
       events.length > 1 &&
-      events[events.length - 1].trim() === '' &&
-      events[events.length - 2].trim() === ''
+      !events[events.length - 1].trim() &&
+      !events[events.length - 2].trim()
     ) {
       events.pop();
     }
@@ -230,17 +317,26 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
   };
 
   const resetForm = () => {
-    setValues(EMPTY_FORM);
+    setValues(createEmptyForm());
     setErrors({});
     setShowErrors(false);
+    setSubmitError(null);
   };
 
   const handleClose = () => {
+    if (isSubmitting) {
+      return;
+    }
+
     resetForm();
     onClose();
   };
 
-  const submitForm = () => {
+  const submitForm = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
     const nextErrors = validate(values);
 
     setErrors(nextErrors);
@@ -250,22 +346,28 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
       return;
     }
 
-    onSubmit({
-      ...values,
-      events: values.events
-        .map((event) => event.trim())
-        .filter((event) => event !== ''),
-    });
-    resetForm();
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await onSubmit(toCreateCardRequest(values), values.files[0] ?? null);
+
+      resetForm();
+      onClose();
+    } catch {
+      setSubmitError('Не удалось создать карточку. Попробуйте ещё раз.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    submitForm();
+    void submitForm();
   };
 
-  const filledEventsCount = values.events.filter(
-    (event) => event.trim() !== ''
+  const filledEventsCount = values.events.filter((event) =>
+    event.trim()
   ).length;
 
   return (
@@ -288,17 +390,23 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
             options={VISIBILITY_OPTIONS}
             onChange={(visibility) => updateField('visibility', visibility)}
             ariaLabel='Видимость карточки'
+            disabled={isSubmitting}
           />
         </>
       }
       actions={
         <>
-          <Button variant='text' onClick={handleClose}>
+          <Button variant='text' onClick={handleClose} disabled={isSubmitting}>
             Отмена
           </Button>
 
-          <Button type='button' variant='contained' onClick={submitForm}>
-            Отправить на модерацию
+          <Button
+            type='button'
+            variant='contained'
+            onClick={() => void submitForm()}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Отправка...' : 'Отправить на модерацию'}
           </Button>
         </>
       }
@@ -311,6 +419,7 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
           errorText={errors.title}
           required
           autoFocus
+          disabled={isSubmitting}
         />
 
         <FieldRow>
@@ -322,75 +431,92 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
             }
             errorText={errors.personalFlow}
             required
+            disabled={isSubmitting}
           />
+
           <Input
             label='Отрасль'
             value={values.industry}
             onChange={(industry) => updateField('industry', industry)}
             errorText={errors.industry}
             required
+            disabled={isSubmitting}
           />
         </FieldRow>
 
-        <Input
-          label='Основной результат'
-          value={values.mainResult}
-          onChange={(mainResult) => updateField('mainResult', mainResult)}
-          errorText={errors.mainResult}
-          multiline
-          minRows={2}
-          maxRows={6}
-          required
-        />
+        <FormControl
+          fullWidth
+          size='small'
+          error={Boolean(errors.categoryId)}
+          disabled={isSubmitting}
+        >
+          <InputLabel id='add-card-category-label'>Категория</InputLabel>
+
+          <Select<string>
+            labelId='add-card-category-label'
+            label='Категория'
+            value={values.categoryId}
+            onChange={(event) => updateField('categoryId', event.target.value)}
+          >
+            {categories.map((category) => (
+              <MenuItem key={category.id} value={category.id}>
+                {category.name}
+              </MenuItem>
+            ))}
+          </Select>
+
+          {errors.categoryId && (
+            <FormHelperText>{errors.categoryId}</FormHelperText>
+          )}
+        </FormControl>
 
         <Stack spacing={2.5}>
-          {values.metrics.map((pair, index) => (
+          {values.metrics.map((metric, index) => (
             <Stack key={index} spacing={1}>
               <Box sx={{ width: '50%' }}>
                 <Input
-                  label='Напишите заголовок'
-                  ariaLabel={`Заголовок показателя ${index + 1}`}
-                  value={pair.title}
+                  label='Название показателя'
+                  ariaLabel={`Название показателя ${index + 1}`}
+                  value={metric.title}
                   onChange={(title) => updateMetricTitle(index, title)}
                   errorText={errors.metrics?.[index]?.title}
-                  multiline
-                  minRows={1}
-                  maxRows={3}
-                  required
+                  disabled={isSubmitting}
                 />
               </Box>
 
-              <Collapse in={pair.title.trim() !== ''} timeout='auto'>
+              <Collapse in={metric.title.trim() !== ''} timeout='auto'>
                 <Stack spacing={1}>
                   <FieldRow>
                     <Input
-                      label='Показатель'
-                      placeholder='Было'
-                      value={pair.before}
+                      label='Было'
+                      value={metric.before}
                       onChange={(before) =>
                         updateMetricValue(index, 'before', before)
                       }
                       errorText={errors.metrics?.[index]?.before}
-                      required
+                      disabled={isSubmitting}
                     />
+
                     <Input
-                      ariaLabel={`Стало, показатель ${index + 1}`}
-                      placeholder='Стало'
-                      value={pair.after}
+                      label='Стало'
+                      value={metric.after}
                       onChange={(after) =>
                         updateMetricValue(index, 'after', after)
                       }
                       errorText={errors.metrics?.[index]?.after}
+                      disabled={isSubmitting}
                     />
                   </FieldRow>
-                  {hasMetricValue(pair.before) &&
-                    hasMetricValue(pair.after) && (
+
+                  {parseMetricNumber(metric.before) !== null &&
+                    parseMetricNumber(metric.after) !== null && (
                       <SwitchField
                         label='Положительный результат'
-                        checked={pair.enabled}
+                        checked={metric.enabled}
                         onChange={(enabled) =>
                           updateMetricSwitch(index, enabled)
                         }
+                        disabled={isSubmitting}
                       />
                     )}
                 </Stack>
@@ -412,6 +538,7 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
               minRows={2}
               maxRows={3}
               required={index === 0}
+              disabled={isSubmitting}
             />
           ))}
 
@@ -426,7 +553,14 @@ export function AddCardModal({ open, onClose, onSubmit }: AddCardModalProps) {
           allowedTypes={ALL_FILE_TYPES}
           maxSizeMb={3}
           maxFiles={1}
+          disabled={isSubmitting}
         />
+
+        {submitError && (
+          <Typography role='alert' color='error'>
+            {submitError}
+          </Typography>
+        )}
       </AppForm>
     </ModalLayout>
   );
