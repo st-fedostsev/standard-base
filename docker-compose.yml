@@ -1,13 +1,15 @@
 services:
   frontend:
+    restart: unless-stopped
     platform: linux/amd64
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "8080:80"
 
   backend:
+    restart: unless-stopped
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -19,6 +21,7 @@ services:
     env_file: ./backend/.env
   
   db:
+    restart: unless-stopped
     image: postgres:17-alpine
     shm_size: 128mb
     env_file: ./postgres.env
