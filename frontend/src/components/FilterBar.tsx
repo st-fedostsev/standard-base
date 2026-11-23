@@ -21,8 +21,11 @@ import fieldStyles from '@/components/FilterField.module.css';
 
 type FilterBarProps<T extends FilterValues> = {
   defs: FilterDef[];
+
+  /** Текущие значения фильтров. */
   value: T;
   defaults: T;
+
   onChange: (next: T) => void;
   dataTid?: string;
 };
