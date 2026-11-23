@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 
 import { DateRangeField } from '@/components/DateRangeField';
+import fieldStyles from '@/components/FilterField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { SearchInput } from '@/components/SearchInput';
@@ -17,12 +18,13 @@ import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
 
 import { fieldSx } from './fieldSx';
 
-import fieldStyles from '@/components/FilterField.module.css';
-
 type FilterBarProps<T extends FilterValues> = {
   defs: FilterDef[];
+
+  /** Текущие значения фильтров. */
   value: T;
   defaults: T;
+
   onChange: (next: T) => void;
   dataTid?: string;
 };
