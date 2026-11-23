@@ -52,7 +52,7 @@ async def populate_defaults():
                 session, 
                 user.id, 
                 'Добро пожаловать',
-                'Вы являетесь администратором системы',
+                'Вы являетесь администратором системы'
             )
 
 @app.on_event('startup')
