@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { ActionItem } from '@/utils/types/actions';
+import type { TableSelection } from './selection';
 
 export type SortDir = 'asc' | 'desc';
 
@@ -47,14 +48,18 @@ export type DataTableProps<T> = {
   rows: T[];
   getRowId: (row: T) => string;
 
+  /** Содержимое слева от переключателя вида, например счётчик. */
+  toolbarStart?: ReactNode;
+
   /**
    * Необязательное изображение или другой блок в верхней части карточки.
    * Показывается только в карточном представлении.
    */
   renderCardMedia?: (row: T) => ReactNode;
 
-  selectedIds?: ReadonlySet<string>;
-  onSelectedIdsChange?: (ids: Set<string>) => void;
+  totalMatchingCount: number;
+  selection: TableSelection;
+  onSelectionChange: (selection: TableSelection) => void;
   massActionsPanel?: (context: MassActionsContext) => ReactNode;
 
   kebabMenu?: (row: T) => ActionItem[];

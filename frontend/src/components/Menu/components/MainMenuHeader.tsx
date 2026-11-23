@@ -16,8 +16,18 @@ export function MainMenuHeader({ title, showLabels }: MainMenuHeaderProps) {
 
       {title && (
         <Typography
-          variant='subtitle2'
+          variant='subtitle1'
           className={`${styles.title} ${showLabels ? styles.titleVisible : ''}`}
+          sx={{
+            maxWidth: '100%',
+            fontFamily: 'Raleway, sans-serif',
+            fontSize: 16,
+            fontWeight: 700,
+            lineHeight: 1,
+            letterSpacing: 0,
+            color: '#000',
+            textTransform: 'uppercase',
+          }}
         >
           {title}
         </Typography>

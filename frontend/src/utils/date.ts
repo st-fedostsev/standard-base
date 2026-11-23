@@ -1,55 +1,91 @@
-const pad = (n: number) => String(n).padStart(2, '0');
+const pad = (value: number) => String(value).padStart(2, '0');
 
-/** Дата YYYY-MM-DD по локальному времени. */
-export function toIsoDate(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** Локальная дата в формате YYYY-MM-DD. */
+export function toIsoDate(date: Date): string {
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join('-');
 }
 
-/** YYYY-MM-DD в Date. Пусто или некорректно: null. */
-export function fromIsoDate(iso: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+/** Строго разбирает YYYY-MM-DD как локальную дату. */
+export function fromIsoDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
-/** YYYY-MM-DD в дд.мм.гггг. Пусто: пустая строка. */
-export function formatRu(iso: string): string {
-  const d = fromIsoDate(iso);
-  return d
-    ? `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
-    : '';
-}
+  if (!match) return null;
 
-/**
- * Дд.мм.гггг в YYYY-MM-DD. Неполная или несуществующая дата (например, 31.02):
- * null.
- */
-export function parseRu(text: string): string | null {
-  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(text.trim());
-  if (!m) return null;
-  const iso = `${m[3]}-${m[2]}-${m[1]}`;
-  const d = fromIsoDate(iso);
-  if (!d || d.getDate() !== Number(m[1]) || d.getMonth() + 1 !== Number(m[2]))
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const result = new Date(year, month - 1, day);
+
+  // Проверяем, что JS не нормализовал несуществующую дату, например 31 февраля.
+  if (
+    result.getFullYear() !== year ||
+    result.getMonth() !== month - 1 ||
+    result.getDate() !== day
+  ) {
     return null;
-  return iso;
+  }
+
+  return result;
 }
 
-export const todayIso = () => toIsoDate(new Date());
+/** YYYY-MM-DD → ДД.ММ.ГГГГ. */
+export function formatRuDate(value: string): string {
+  const date = fromIsoDate(value);
 
-export const startOfMonth = (d: Date) =>
-  new Date(d.getFullYear(), d.getMonth(), 1);
+  if (!date) return '';
 
-export const addMonths = (d: Date, n: number) =>
-  new Date(d.getFullYear(), d.getMonth() + n, 1);
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
+}
 
-/** 42 дня (6 недель) для сетки календаря. Неделя начинается с понедельника. */
-export function buildMonthGrid(view: Date): Date[] {
-  const first = startOfMonth(view);
-  // В getDay() воскресенье = 0, переводим так, чтобы понедельник был первым
-  const offset = (first.getDay() + 6) % 7;
+/** ДД.ММ.ГГГГ → YYYY-MM-DD. Возвращает null для неполной/неверной даты. */
+export function parseRuDate(value: string): string | null {
+  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value.trim());
+
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return toIsoDate(date);
+}
+
+/** Нормализует дату к первому числу месяца. */
+export function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+/** Возвращает начало месяца с указанным смещением. */
+export function shiftMonth(date: Date, amount: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+/** Сетка из 42 дат, неделя начинается с понедельника. */
+export function getMonthGrid(month: Date): Date[] {
+  const firstDay = startOfMonth(month);
+  const mondayOffset = (firstDay.getDay() + 6) % 7;
+
   return Array.from(
     { length: 42 },
-    (_, i) => new Date(first.getFullYear(), first.getMonth(), 1 - offset + i)
+    (_, index) =>
+      new Date(
+        firstDay.getFullYear(),
+        firstDay.getMonth(),
+        1 - mondayOffset + index
+      )
   );
 }

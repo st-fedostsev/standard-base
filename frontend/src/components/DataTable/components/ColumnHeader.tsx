@@ -123,7 +123,7 @@ export function ColumnHeader({
         slotProps={{
           paper: {
             sx: {
-              minWidth: 220,
+              minWidth: 289,
               maxWidth: 'calc(100vw - 32px)',
               borderRadius: 2,
               mt: 0.5,

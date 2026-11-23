@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
+import { AppForm } from '@/components/AppForm';
+import { Input } from '@/components/Input';
+import { api } from '@/utils/api';
+import { useAuth } from '@/utils/hooks/useAuth';
 import {
   Alert,
   Box,
@@ -14,12 +18,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-
-import { AppForm } from '@/components/AppForm';
-import { Input } from '@/components/Input';
-
-import { api } from '@/utils/api';
-import { useAuth } from '@/utils/hooks/useAuth';
 
 type RegisterFormValues = {
   lastName: string;

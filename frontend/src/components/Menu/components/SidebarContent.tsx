@@ -1,18 +1,17 @@
-import { Box, Divider, List } from '@mui/material';
-
 import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
 import type { NavItem } from '@/utils/types/navigation';
-import type { NotificationItem } from '@/utils/types/notifications';
 import { hasAccess } from '@/utils/types/roles';
+import { Box, Divider, List } from '@mui/material';
 
-import styles from '../Menu.module.css';
 import { MainMenuHeader } from './MainMenuHeader';
 import { MenuNavigationItem } from './MenuNavigationItem';
 import { NotificationMenuItem } from './NotificationMenuItem';
 import { UserMenu } from './UserMenu';
 
+import styles from '../Menu.module.css';
+
 export const RAIL_WIDTH = 64;
-export const FULL_WIDTH = 220;
+export const FULL_WIDTH = 289;
 
 type SidebarContentProps = {
   items: NavItem[];
@@ -23,15 +22,12 @@ type SidebarContentProps = {
   showLabels: boolean;
   isMobile: boolean;
 
-  notifications: readonly NotificationItem[];
-  unreadNotificationsCount: number;
   notificationsOpen: boolean;
   onOpenNotifications: () => void;
   onCloseNotifications: () => void;
-  onMarkNotificationRead: (id: string) => void;
-  onHideNotification: (id: string) => void;
 
   onNavigate: () => void;
+  onRegister: () => void;
 };
 
 export function SidebarContent({
@@ -41,42 +37,56 @@ export function SidebarContent({
   rail,
   showLabels,
   isMobile,
-  notifications,
-  unreadNotificationsCount,
   notificationsOpen,
   onOpenNotifications,
   onCloseNotifications,
-  onMarkNotificationRead,
-  onHideNotification,
   onNavigate,
+  onRegister,
 }: SidebarContentProps) {
   const role = useCurrentRole();
 
   const visibleItems = items.filter((item) => hasAccess(role, item.roles));
+
   const visibleFooterItems = footerItems.filter((item) =>
     hasAccess(role, item.roles)
   );
 
   return (
-    <Box className={styles.content}>
+    <Box
+      className={styles.content}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        minHeight: 0,
+        boxSizing: 'border-box',
+      }}
+    >
       <MainMenuHeader title={title} showLabels={showLabels} />
 
       <Divider className={styles.menuDivider} />
 
-      {/* Аналог SideMenu.Body */}
-      <List component='div' disablePadding className={styles.body}>
+      <List
+        component='div'
+        disablePadding
+        className={styles.body}
+        sx={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
         <NotificationMenuItem
-          notifications={notifications}
-          unreadCount={unreadNotificationsCount}
           open={notificationsOpen}
           onOpen={onOpenNotifications}
           onClose={onCloseNotifications}
-          onMarkRead={onMarkNotificationRead}
-          onHide={onHideNotification}
           rail={rail}
           expanded={showLabels}
           isMobile={isMobile}
           sidebarWidth={FULL_WIDTH}
+          onRegister={onRegister}
         />
 
         {visibleItems.map((item) => (
@@ -86,19 +96,20 @@ export function SidebarContent({
             rail={rail}
             showLabels={showLabels}
             onNavigate={onNavigate}
+            notificationsOpen={notificationsOpen}
           />
         ))}
       </List>
 
-      {/* Аналог SideMenu.Footer */}
-      {/* Нижние пункты и пользователь */}
       <Box
         sx={{
+          width: '100%',
           mt: 'auto',
           flexShrink: 0,
           px: 1,
           pt: 1,
           pb: 2,
+          boxSizing: 'border-box',
         }}
       >
         <List component='div' disablePadding>
@@ -109,14 +120,11 @@ export function SidebarContent({
               rail={rail}
               showLabels={showLabels}
               onNavigate={onNavigate}
+              notificationsOpen={notificationsOpen}
             />
           ))}
 
-          <UserMenu
-            rail={rail}
-            expanded={showLabels}
-            popupWidth={FULL_WIDTH - 16}
-          />
+          <UserMenu rail={rail} expanded={showLabels} popupWidth={220} />
         </List>
       </Box>
     </Box>
