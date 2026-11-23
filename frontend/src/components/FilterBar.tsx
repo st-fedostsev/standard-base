@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 
 import { DateRangeField } from '@/components/DateRangeField';
+import fieldStyles from '@/components/FilterField.module.css';
 import { MultiSelectField } from '@/components/MultiSelectField';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { SearchInput } from '@/components/SearchInput';
