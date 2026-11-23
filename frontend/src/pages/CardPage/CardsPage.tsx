@@ -209,7 +209,7 @@ export function CardsPage() {
             columns={CARD_COLUMNS}
             rows={rows}
             getRowId={(card) => card.id}
-            totalMatchingCount={totalCount}
+            totalMatchingCount={rows.length}
             selection={selection}
             onSelectionChange={setSelection}
             onRowClick={(card) => navigate(`/cards/${card.id}`)}
