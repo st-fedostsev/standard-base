@@ -51,3 +51,8 @@ class ChangeEmailData(BaseModel):
 class ChangePasswordData(BaseModel):
     current_password: str
     new_password: str
+
+class ChangeNameData(BaseModel):
+    first_name: Optional[str]
+    last_name: Optional[str]
+    patronymic: Optional[str]
