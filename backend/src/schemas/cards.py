@@ -4,23 +4,31 @@ import uuid
 from models import CardStatus, CardVisibility
 import datetime
 
+
+class ResultInfo(BaseModel):
+    title: str
+    before: float
+    after: float
+    is_positive: bool
+
+class AuthorInfo(BaseModel):
+    id: uuid.UUID
+    first_name: str
+    last_name: str
+    patronymic: Optional[str]
+
+class CategoryInfo(BaseModel):
+    id: uuid.UUID
+    name: str
+
 class CardCreateData(BaseModel):
     title: str
-    branch: str
+    industry: str
     pilot_stream: str
-    main_result: str
-    is_positive_result_1: bool
-    result_old_1: str
-    result_new_1: str
-    is_positive_result_2: bool
-    result_old_2: str
-    result_new_2: str
-    is_positive_result_3: bool
-    result_old_3: str
-    result_new_3: str
-    events: list[str]
+    results: list[ResultInfo]
+    activities: list[str]
     category_id: uuid.UUID
-    status: CardStatus
+    #status: CardStatus
     visibility: CardVisibility
 
 class CardGetData(BaseModel):
@@ -33,4 +41,21 @@ class CardGetData(BaseModel):
     offset: int
 
 class CardExportData(BaseModel):
+    id: uuid.UUID
+
+class CardGetResult(BaseModel):
+    id: uuid.UUID
+    title: str
+    industry: str
+    pilot_stream: str
+    results: list[ResultInfo]
+    activities: list[str]
+    photo: Optional[str]
+    category: CategoryInfo
+    author: AuthorInfo
+    status: CardStatus
+    visibility: CardVisibility
+    created_at: datetime.datetime
+
+class CardImportResult(BaseModel):
     id: uuid.UUID
