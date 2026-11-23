@@ -7,6 +7,7 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const host = env.HOST || 'localhost';
+  const api_host = env.API_PROXY_TARGET;
   const port = 5173;
 
   return {
@@ -23,7 +24,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           rewrite: (path) => path.replace(/^\/api(?=\/|$)/, '') || '/',
-          target: `http://${host}:8000/`,
+          target: `http://${api_host}:8000/`,
           changeOrigin: true,
           prependPath: false,
           secure: false,
