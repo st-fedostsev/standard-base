@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request, Depends, Security, Response, status, Coo
 from sqlmodel import Session, select
 from database.session import get_session
 from models import User, UserRole, Card, CardCategory
-from pwdlib import PasswordHash
 from notifiers.email_notifier import EmailNotifier, get_email_notifier
 from schemas.admin import *
 from schemas.common import Message
@@ -38,8 +37,6 @@ router = APIRouter(
         }
     }
 )
-
-pwd_context = PasswordHash.recommended()
 
 @router.post(
     '/create_category',
