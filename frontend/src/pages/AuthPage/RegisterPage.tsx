@@ -222,7 +222,7 @@ export function RegisterPage() {
       setCodeId(null);
       setCodeDialogOpen(false);
 
-      navigate('/', { replace: true });
+      navigate('/base', { replace: true });
     } catch {
       setCodeError('Не удалось подтвердить код. Попробуйте снова.');
     } finally {

@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 
 import { useAuth } from '@/utils/hooks/useAuth';
 import {
@@ -14,34 +8,10 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import { useQueryClient } from '@tanstack/react-query';
+import { useIsFetching } from '@tanstack/react-query';
 import { AppErrorScreen } from '../AppErrorScreen';
 
 const HIDE_DELAY_MS = 120;
-
-function usePendingInitialQueries(): number {
-  const queryCache = useQueryClient().getQueryCache();
-
-  const subscribe = useCallback(
-    (notify: () => void) => queryCache.subscribe(notify),
-    [queryCache]
-  );
-
-  const getSnapshot = useCallback(
-    () =>
-      queryCache
-        .getAll()
-        .filter(
-          (query) =>
-            query.meta?.globalLoader === true &&
-            query.state.data === undefined &&
-            query.state.fetchStatus === 'fetching'
-        ).length,
-    [queryCache]
-  );
-
-  return useSyncExternalStore(subscribe, getSnapshot, () => 0);
-}
 
 /** Блокирует скролл страницы только пока показан полноэкранный loader. */
 function useLockPageScroll(locked: boolean) {
@@ -85,7 +55,10 @@ export function IGlobalLoader() {
     isError: isAuthError,
     retryAuth,
   } = useAuth();
-  const pendingQueries = usePendingInitialQueries();
+  const pendingQueries = useIsFetching({
+    predicate: (query) =>
+      query.meta?.globalLoader === true && query.state.data === undefined,
+  });
 
   const initialLoading = isAuthPending || pendingQueries > 0;
 
@@ -109,17 +82,15 @@ export function IGlobalLoader() {
   useLockPageScroll(loaderVisible);
 
   if (isAuthError) {
-    if (isAuthError) {
-      return (
-        <AppErrorScreen
-          message='Не удалось загрузить приложение. Проверьте соединение и попробуйте снова.'
-          onRetry={() => {
-            void retryAuth();
-          }}
-          retrying={isAuthPending}
-        />
-      );
-    }
+    return (
+      <AppErrorScreen
+        message='Не удалось загрузить приложение. Проверьте соединение и попробуйте снова.'
+        onRetry={() => {
+          void retryAuth();
+        }}
+        retrying={isAuthPending}
+      />
+    );
   }
 
   if (!loaderVisible) return null;
