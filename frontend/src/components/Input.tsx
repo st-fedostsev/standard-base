@@ -18,10 +18,13 @@ export type InputProps = {
   required?: boolean;
   disabled?: boolean;
   errorText?: string;
+  helperText?: string;
   placeholder?: string;
   multiline?: boolean;
   minRows?: number;
   maxRows?: number;
+  /** Мягкий лимит символов. Ввод и вставка обрезаются, под полем виден счётчик. */
+  maxLength?: number;
   autoFocus?: boolean;
 };
 
@@ -36,21 +39,37 @@ export function Input({
   required = false,
   disabled = false,
   errorText,
+  helperText,
   placeholder,
   multiline = false,
   minRows,
   maxRows,
+  maxLength,
   autoFocus = false,
 }: InputProps) {
   const id = useId();
   const errorId = `${id}-error`;
+  const helperId = `${id}-helper`;
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const isPassword = type === 'password';
   const inputType = isPassword && showPassword ? 'text' : type;
+  const isAtLimit = maxLength !== undefined && value.length >= maxLength;
+  const showCounter =
+    maxLength !== undefined && (isFocused || value.length > 0);
+  const counter = showCounter ? `${value.length}/${maxLength}` : undefined;
+  const describedBy = errorText ? errorId : helperText ? helperId : undefined;
 
   return (
-    <ValidationContainer errorText={errorText} errorId={errorId}>
+    <ValidationContainer
+      errorText={errorText}
+      errorId={errorId}
+      helperText={helperText}
+      helperId={helperId}
+      counter={counter}
+      counterColor={isAtLimit ? 'warning.main' : 'text.secondary'}
+    >
       <TextField
         id={id}
         fullWidth
@@ -69,10 +88,13 @@ export function Input({
         maxRows={multiline ? maxRows : undefined}
         autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         slotProps={{
           htmlInput: {
-            'aria-describedby': errorText ? errorId : undefined,
+            'aria-describedby': describedBy,
             'aria-label': ariaLabel,
+            maxLength,
           },
           input: {
             endAdornment: isPassword ? (
