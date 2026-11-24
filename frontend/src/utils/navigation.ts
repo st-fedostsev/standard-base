@@ -25,10 +25,10 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'moderation',
-    label: 'На согласовании',
+    label: 'Согласование',
     to: '/moderation',
     icon: PlaylistAddCheck,
-    roles: [ROLES.Author, ROLES.Admin],
+    roles: [ROLES.Admin],
   },
   {
     id: 'users',

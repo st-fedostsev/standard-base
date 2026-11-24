@@ -6,6 +6,8 @@ import { Box, Button, CircularProgress, Typography } from '@mui/material';
 type PageLayoutProps = {
   title: string;
   subtitle?: ReactNode;
+  /** Переключатель разделов страницы под заголовком. */
+  headerTabs?: ReactNode;
   actions?: ReactNode;
   filters?: ReactNode;
   children: ReactNode;
@@ -28,6 +30,7 @@ type PageLayoutProps = {
 export function PageLayout({
   title,
   subtitle,
+  headerTabs,
   actions,
   filters,
   children,
@@ -146,6 +149,10 @@ export function PageLayout({
           </Box>
         )}
       </Box>
+
+      {headerTabs != null && (
+        <Box sx={{ mt: 1.5, minWidth: 0 }}>{headerTabs}</Box>
+      )}
 
       {/* Фильтры не скрываются при пустом результате или ошибке. */}
       {filters != null && <Box sx={{ mt: 3, minWidth: 0 }}>{filters}</Box>}

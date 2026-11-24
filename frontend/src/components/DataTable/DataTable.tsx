@@ -42,6 +42,7 @@ export function DataTable<T>({
   onRowClick,
   renderCardMedia,
   toolbarStart,
+  showViewSwitcher = true,
   isLoading = false,
   errorText,
   empty,
@@ -167,11 +168,13 @@ export function DataTable<T>({
         >
           <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>{toolbarStart}</Box>
 
-          <ViewSwitcher
-            value={currentView}
-            onChange={setPreferredView}
-            compact={isCompact}
-          />
+          {showViewSwitcher && (
+            <ViewSwitcher
+              value={currentView}
+              onChange={setPreferredView}
+              compact={isCompact}
+            />
+          )}
         </Box>
       )}
 
