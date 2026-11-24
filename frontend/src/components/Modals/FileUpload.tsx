@@ -22,6 +22,7 @@ type FileUploadProps = {
   hint?: string;
   maxSizeMb?: number;
   maxFiles?: number;
+  accept?: string;
   errorText?: string;
   disabled?: boolean;
 };
@@ -34,6 +35,7 @@ export function FileUpload({
   hint = 'SVG, PNG, JPG или GIF (макс. 3 МБ)',
   maxSizeMb = 3,
   maxFiles = 10,
+  accept,
   errorText,
   disabled = false,
 }: FileUploadProps) {
@@ -141,6 +143,7 @@ export function FileUpload({
             ref={inputRef}
             type='file'
             multiple={maxFiles > 1}
+            accept={accept}
             disabled={disabled}
             onChange={handleInput}
             aria-describedby={message ? errorId : undefined}

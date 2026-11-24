@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { PageLayout } from '@/App/PageLayout';
 import { DataTable } from '@/components/DataTable';
@@ -12,11 +11,15 @@ import { FilterBar } from '@/components/FilterBar';
 import { InfiniteScrollable } from '@/components/InfiniteScrollable/InfiniteScrollable';
 import { MassActionsPanel } from '@/components/MassActionsPanel';
 import { AddCardModal } from '@/components/Modals/AddCardModal';
+import { CardPreviewModal } from '@/components/Modals/CardPreviewModal';
+import { ImportCardModal } from '@/components/Modals/ImportCardModal';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { useToast } from '@/components/Toast/useToast';
 import { api } from '@/utils/api';
 import {
   DEFAULT_CARD_FILTERS,
   type CardFilters,
+  type CardRow,
   type CreateCardRequest,
 } from '@/utils/types/cards';
 import { isFiltered } from '@/utils/types/filters';
@@ -26,6 +29,7 @@ import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
 import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
 import SearchOffOutlined from '@mui/icons-material/SearchOffOutlined';
+import VisibilityOutlined from '@mui/icons-material/VisibilityOutlined';
 import { Button, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -35,13 +39,15 @@ import { filterCards } from './utils/filterCards';
 import { useCardsPageData } from './utils/useCardsPageData';
 
 export function CardsPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
   const [selection, setSelection] =
     useState<TableSelection>(createEmptySelection);
   const [addCardOpen, setAddCardOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [previewCard, setPreviewCard] = useState<CardRow | null>(null);
 
   const {
     cards,
@@ -76,6 +82,18 @@ export function CardsPage() {
     await api.Cards.create(payload, photo);
     await queryClient.invalidateQueries({ queryKey: ['cards'] });
     setSelection(createEmptySelection());
+  };
+
+  const exportCard = async (card: CardRow): Promise<void> => {
+    try {
+      await api.Cards.downloadExport(card);
+      showToast({ message: 'Экспорт карточки начат', use: 'success' });
+    } catch {
+      showToast({
+        message: 'Не удалось экспортировать карточку',
+        use: 'error',
+      });
+    }
   };
 
   const hasFilters = isFiltered(filters, DEFAULT_CARD_FILTERS);
@@ -144,16 +162,15 @@ export function CardsPage() {
               <Button
                 variant='contained'
                 startIcon={<FileUploadOutlined />}
-                // TODO: подключить импорт файла.
+                onClick={() => setImportOpen(true)}
                 sx={{
                   px: 2,
                   py: '6px',
                   minHeight: 36,
                   fontSize: 14,
-                  fontWeight: 500,
+                  fontWeight: 700,
                   lineHeight: '24px',
                   letterSpacing: '0.4px',
-                  textTransform: 'uppercase',
                 }}
               >
                 Импортировать
@@ -168,10 +185,9 @@ export function CardsPage() {
                   py: '6px',
                   minHeight: 36,
                   fontSize: 14,
-                  fontWeight: 500,
+                  fontWeight: 700,
                   lineHeight: '24px',
                   letterSpacing: '0.4px',
-                  textTransform: 'uppercase',
                 }}
               >
                 Создать
@@ -212,7 +228,6 @@ export function CardsPage() {
             totalMatchingCount={rows.length}
             selection={selection}
             onSelectionChange={setSelection}
-            onRowClick={(card) => navigate(`/cards/${card.id}`)}
             massActionsPanel={({ count, selectAll, clear }) => (
               <MassActionsPanel
                 count={count}
@@ -224,27 +239,25 @@ export function CardsPage() {
                     label: 'Экспортировать выбранное',
                     icon: FileDownloadOutlined,
                     disabled: true,
-                    onClick: () => {
-                      // TODO: подключить экспорт выбранных карточек.
-                    },
+                    // Массовый экспорт появится вместе с отдельным эндпоинтом.
+                    onClick: () => undefined,
                   },
                 ]}
               />
             )}
             kebabMenu={(card) => [
               {
-                id: 'open',
-                label: 'Открыть',
-                icon: DescriptionOutlined,
-                onClick: () => navigate(`/cards/${card.id}`),
+                id: 'preview-card',
+                label: 'Предпросмотр',
+                icon: VisibilityOutlined,
+                onClick: () => setPreviewCard(card),
               },
               {
                 id: 'export-card',
                 label: 'Экспортировать карточку',
                 icon: FileDownloadOutlined,
-                disabled: true,
                 onClick: () => {
-                  // TODO: подключить экспорт карточки.
+                  void exportCard(card);
                 },
               },
             ]}
@@ -257,6 +270,23 @@ export function CardsPage() {
         onClose={() => setAddCardOpen(false)}
         categories={categories}
         onSubmit={onSubmit}
+      />
+
+      <ImportCardModal
+        open={importOpen}
+        categories={categories}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          void queryClient.invalidateQueries({ queryKey: ['cards'] });
+          setSelection(createEmptySelection());
+        }}
+      />
+
+      <CardPreviewModal
+        open={previewCard !== null}
+        card={previewCard}
+        onClose={() => setPreviewCard(null)}
+        onExport={exportCard}
       />
     </>
   );

@@ -11,48 +11,57 @@ export const CARD_STATUS_LABELS = {
 
 export type CardStatus = keyof typeof CARD_STATUS_LABELS;
 
-/** Варианты статуса для FilterBar. */
 export const CARD_STATUS_OPTIONS: FilterOption[] = Object.entries(
   CARD_STATUS_LABELS
 ).map(([value, label]) => ({ value, label }));
 
-/** Видимость карточки и подписи для интерфейса. */
+/** Видимость карточек и подписи для интерфейса. */
 export const CARD_VISIBILITY_LABELS = {
   private: 'Приватная',
   protected: 'Защищенная',
   public: 'Публичная',
 } as const;
 
-export type CardVisibility = keyof typeof CARD_VISIBILITY_LABELS;
+export const CARD_VISIBILITIES = ['public', 'protected', 'private'] as const;
 
-/** Автор из ответа API карточек. */
+export type CardVisibility = (typeof CARD_VISIBILITIES)[number];
+
+/** Автор в ответе API после преобразования snake_case → camelCase. */
 export type CardAuthor = {
   id: string;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   patronymic: string | null;
 };
 
-/** Категория из ответа API. */
+/** Категория в ответе API. */
 export type CardCategory = {
   id: string;
   name: string;
 };
 
-/** Показатель карточки. */
+/** Показатель в ответе API после преобразования ключей. */
 export type CardResult = {
+  title: string;
+  before: number;
+  after: number;
+  isPositive: boolean;
+};
+
+/** Показатель в запросе создания — ключи остаются в snake_case. */
+export type CreateCardResult = {
   title: string;
   before: number;
   after: number;
   is_positive: boolean;
 };
 
-/** Карточка в ответе API. */
+/** Карточка в ответе API после преобразования ключей в camelCase. */
 export type CardRow = {
   id: string;
   title: string;
   industry: string;
-  pilot_stream: string;
+  pilotStream: string;
   results: CardResult[];
   activities: string[];
   photo: string | null;
@@ -60,13 +69,13 @@ export type CardRow = {
   author: CardAuthor;
   status: CardStatus;
   visibility: CardVisibility;
-  created_at: string;
+  createdAt: string;
 };
 
-/** Ответ одной карточки — та же структура, что и строка таблицы. */
+/** Одна карточка в ответе API. */
 export type CardResponse = CardRow;
 
-/** Категории, преобразованные в варианты для FilterBar. */
+/** Преобразовать категории в варианты для FilterBar. */
 export function toCardCategoryOptions(
   categories: CardCategory[]
 ): FilterOption[] {
@@ -96,7 +105,7 @@ export const DEFAULT_CARD_FILTERS: CardFilters = {
   },
 };
 
-/** Параметры POST /cards/get. */
+/** Тело POST /cards/get — отправляется backend в snake_case. */
 export type GetCardsRequest = {
   created_from?: string | null;
   created_to?: string | null;
@@ -112,7 +121,7 @@ export type CreateCardRequest = {
   title: string;
   industry: string;
   pilot_stream: string;
-  results: CardResult[];
+  results: CreateCardResult[];
   activities: string[];
   category_id: string;
   visibility: CardVisibility;
