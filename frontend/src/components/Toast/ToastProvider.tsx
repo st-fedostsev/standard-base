@@ -6,11 +6,12 @@ import {
   type ReactNode,
 } from 'react';
 
-import { Alert, AlertTitle, Snackbar } from '@mui/material';
+import { Alert, AlertTitle, Slide, Snackbar } from '@mui/material';
 
-import styles from './Toast.module.css';
 import type { ToastContextValue, ToastItem, ToastOptions } from './Toast.types';
 import { ToastContext } from './ToastContext';
+
+import styles from './Toast.module.css';
 
 type ToastProviderProps = {
   children: ReactNode;
@@ -33,7 +34,7 @@ const INITIAL_STATE: ToastState = {
   open: false,
 };
 
-const DEFAULT_DURATION = 5000;
+const DEFAULT_DURATION = 1500;
 
 function toastReducer(state: ToastState, action: ToastAction): ToastState {
   switch (action.type) {
@@ -132,11 +133,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
             vertical: 'top',
             horizontal: 'center',
           }}
-          autoHideDuration={
-            current.autoClose === false
-              ? null
-              : (current.duration ?? DEFAULT_DURATION)
-          }
+          autoHideDuration={current.duration ?? DEFAULT_DURATION}
+          transitionDuration={{ enter: 200, exit: 150 }}
           onClose={(_event, reason) => {
             // Клик по странице не закрывает toast.
             if (reason === 'clickaway') return;
@@ -146,8 +144,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
               id: current.id,
             });
           }}
+          slots={{ transition: Slide }}
           slotProps={{
             transition: {
+              easing: {
+                enter: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
+                exit: 'ease-out',
+              },
               onExited: () => {
                 dispatch({
                   type: 'exited',
@@ -168,19 +171,15 @@ export function ToastProvider({ children }: ToastProviderProps) {
             role={
               variant === 'error' || variant === 'warning' ? 'alert' : 'status'
             }
-            sx={
-              variant === 'default'
+            sx={{
+              borderRadius: 2,
+              overflow: 'hidden',
+              ...(variant === 'default'
                 ? {
                     bgcolor: '#424242',
                     color: '#fff',
                   }
-                : undefined
-            }
-            onClose={() => {
-              dispatch({
-                type: 'dismiss',
-                id: current.id,
-              });
+                : {}),
             }}
           >
             {current.title && <AlertTitle>{current.title}</AlertTitle>}
