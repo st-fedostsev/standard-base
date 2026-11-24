@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { TruncatedText } from '@/components/TruncatedText';
 import { Box, Typography } from '@mui/material';
 
 type CellLinesProps = {
@@ -19,17 +20,12 @@ export function CellLines({ primary, secondary }: CellLinesProps) {
       </Typography>
 
       {secondary && (
-        <Typography
+        <TruncatedText
+          value={secondary}
           variant='caption'
-          title={secondary}
-          sx={{
-            display: 'block',
-            color: 'text.secondary',
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {secondary}
-        </Typography>
+          color='text.secondary'
+          alwaysShowTooltip
+        />
       )}
     </Box>
   );
