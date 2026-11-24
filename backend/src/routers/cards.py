@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request, Depends, Security, Response, status, Upl
 from sqlmodel import Session, select, column, or_
 from database.session import get_session
 from models import User, AuthCode, UserRole, Card, CardCategory, CardVisibility
-from pwdlib import PasswordHash
 from notifiers.email_notifier import EmailNotifier, get_email_notifier
 from schemas.cards import *
 from schemas.common import Message
@@ -39,8 +38,6 @@ router = APIRouter(
         }
     }
 )
-
-pwd_context = PasswordHash.recommended()
 
 @router.post(
     '/create',
@@ -175,15 +172,6 @@ async def get(
 
     return result
 
-@router.get(
-    '/categories',
-    summary='Получить категории карточек'
-)
-async def categories(response: Response, session: Session = Depends(get_session)):
-    q = select(CardCategory)
-    result = session.exec(q).all()
-    return list(map(dict, result))
-
 @router.post(
     '/export',
     summary='Экспортировать карточку как слайд'
@@ -259,3 +247,18 @@ async def import_card(
     session.commit()
 
     return CardImportResult(id=card.id)
+
+@router.post(
+    '/categories',
+    summary='Получить категории карточек'
+)
+async def categories(
+    response: Response, 
+    get_category_data: GetCategoryData, 
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security)
+):
+    q = select(CardCategory).offset(get_category_data.offset).limit(get_category_data.limit)
+    result = session.exec(q).all()
+
+    return result

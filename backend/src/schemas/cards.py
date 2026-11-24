@@ -59,3 +59,7 @@ class CardGetResult(BaseModel):
 
 class CardImportResult(BaseModel):
     id: uuid.UUID
+
+class GetCategoryData(BaseModel):
+    limit: int
+    offset: int
