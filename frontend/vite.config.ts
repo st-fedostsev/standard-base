@@ -7,7 +7,6 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const host = env.HOST;
-  const api_host = env.API_PROXY_TARGET;
   const port = 5173;
 
   return {
@@ -20,11 +19,14 @@ export default defineConfig(({ mode }) => {
     server: {
       host,
       port,
-      open: process.env.CI ? false : `http://${host}:${port}/`,
+      // true открывает фактический адрес Vite, даже если 5173 занят и порт
+      // автоматически сдвинулся. Иначе можно попасть в чужой dev-сервер.
+      open: process.env.CI ? false : true,
       proxy: {
         '/api': {
           rewrite: (path) => path.replace(/^\/api(?=\/|$)/, '') || '/',
-          target: `http://${api_host}:8000/`,
+          // target: `http://${api_host}:8000/`,
+          target: `http://127.0.0.1:8000/`,
           changeOrigin: true,
           prependPath: false,
           secure: false,
