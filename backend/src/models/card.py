@@ -147,30 +147,6 @@ class Card(SQLModel, table=True):
 
     async def to_pptx(self) -> bytes:
         presentation = Presentation(TEMPLATE_PATH)
-        await asyncio.to_thread(
-            pptx.render, 
-            presentation, 
-            {
-                'title': self.title,
-                'industry': self.industry,
-                'pilot_stream': self.pilot_stream.upper(),
-                'result_title_1': self.result_title_1,
-                'result_old_1': '{:.1f}'.format(self.result_old_1),
-                'result_new_1': '{:.1f}'.format(self.result_new_1),
-                'result_percent_1': self._get_formatted_percent(self.result_old_1, self.result_new_1),
-                'result_title_2': self.result_title_2,
-                'result_old_2': '{:.1f}'.format(self.result_old_2),
-                'result_new_2': '{:.1f}'.format(self.result_new_2),
-                'result_percent_2': self._get_formatted_percent(self.result_old_2, self.result_new_2),
-                'result_title_3': self.result_title_3,
-                'result_old_3': '{:.1f}'.format(self.result_old_3),
-                'result_new_3': '{:.1f}'.format(self.result_new_3),
-                'result_percent_3': self._get_formatted_percent(self.result_old_3, self.result_new_3),
-                'multiplier': '{:.2f}'.format(float(self.result_new_1) / float(self.result_old_1))
-            }
-        )
-        slide, shape = await asyncio.to_thread(pptx.find_by_token, presentation, '{{activities}}')
-        pptx.fill_list(shape.text_frame, self.activities)
 
         results = [
             self.is_positive_result_1,
@@ -224,6 +200,31 @@ class Card(SQLModel, table=True):
                 for paragraph in shape.text_frame.paragraphs:
                     for run in paragraph.runs:
                         run.font.color.rgb = RGBColor.from_string('FF0000')
+
+        await asyncio.to_thread(
+            pptx.render, 
+            presentation, 
+            {
+                'title': self.title,
+                'industry': self.industry,
+                'pilot_stream': self.pilot_stream.upper(),
+                'result_title_1': self.result_title_1,
+                'result_old_1': '{:.1f}'.format(self.result_old_1),
+                'result_new_1': '{:.1f}'.format(self.result_new_1),
+                'result_percent_1': self._get_formatted_percent(self.result_old_1, self.result_new_1),
+                'result_title_2': self.result_title_2,
+                'result_old_2': '{:.1f}'.format(self.result_old_2),
+                'result_new_2': '{:.1f}'.format(self.result_new_2),
+                'result_percent_2': self._get_formatted_percent(self.result_old_2, self.result_new_2),
+                'result_title_3': self.result_title_3,
+                'result_old_3': '{:.1f}'.format(self.result_old_3),
+                'result_new_3': '{:.1f}'.format(self.result_new_3),
+                'result_percent_3': self._get_formatted_percent(self.result_old_3, self.result_new_3),
+                'multiplier': '{:.2f}'.format(float(self.result_new_1) / float(self.result_old_1))
+            }
+        )
+        slide, shape = await asyncio.to_thread(pptx.find_by_token, presentation, '{{activities}}')
+        pptx.fill_list(shape.text_frame, self.activities)
 
         buf = io.BytesIO()
         presentation.save(buf)

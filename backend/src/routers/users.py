@@ -237,6 +237,39 @@ async def change_password(
     return CodeIdData(code_id=code.id)
 
 @router.post(
+    '/change_name',
+    summary='Изменить ФИО'
+)
+async def change_name(
+    response: Response, 
+    change_name_data: ChangeNameData, 
+    session: Session = Depends(get_session), 
+    credentials: JwtAuthorizationCredentials = Security(access_security),
+    notifier: EmailNotifier = Depends(get_email_notifier)
+):
+    if not credentials:
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return Message(msg='Не передан JWT токен или JWT токен неверный')
+    
+    user_id = uuid.UUID(credentials['id'])
+    q = select(User).where(User.id == user_id)
+    user = session.exec(q).first()
+    if user is None:
+        return Message(msg='Пользователь не найден')
+
+    if change_name_data.first_name is not None:
+        user.first_name = change_name_data.first_name
+    if change_name_data.last_name is not None:
+        user.last_name = change_name_data.last_name
+    if change_name_data.patronymic is not None:
+        user.patronymic = change_name_data.patronymic
+
+    session.add(user)
+    session.commit()
+
+    return Message(msg='Данные сохранены')
+
+@router.post(
     '/change_avatar',
     summary='Изменить аватар'
 )
