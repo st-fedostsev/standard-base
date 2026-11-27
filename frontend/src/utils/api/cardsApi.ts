@@ -1,11 +1,20 @@
 import type {
   CardCategory,
   CardResponse,
+  CardVisibility,
   CreateCardRequest,
   CreateCardResponse,
   GetCardsRequest,
 } from '@/utils/types/cards';
 import type { AxiosInstance } from 'axios';
+
+import { downloadBlob, makeSafeFilename } from './utils';
+
+type ImportCardPayload = {
+  category_id: string;
+  visibility: CardVisibility;
+  file: File;
+};
 
 export class CardsApi {
   private readonly http: AxiosInstance;
@@ -50,6 +59,39 @@ export class CardsApi {
     const { data } = await this.http.post<CreateCardResponse>(
       '/cards/create',
       formData
+    );
+
+    return data;
+  };
+
+  /** Экспортирует карточку в PPTX и сразу скачивает файл. */
+  downloadExport = async (
+    card: Pick<CardResponse, 'id' | 'title'>
+  ): Promise<void> => {
+    const { data } = await this.http.post<Blob>(
+      '/cards/export',
+      { id: card.id },
+      { responseType: 'blob' }
+    );
+
+    downloadBlob(data, makeSafeFilename(card.title, 'pptx'));
+  };
+
+  /** Импортирует карточку из презентации PPTX. */
+  importCard = async (payload: ImportCardPayload): Promise<{ id: string }> => {
+    const formData = new FormData();
+
+    formData.append('file', payload.file, payload.file.name);
+
+    const { data } = await this.http.post<{ id: string }>(
+      '/cards/import',
+      formData,
+      {
+        params: {
+          category_id: payload.category_id,
+          visibility: payload.visibility,
+        },
+      }
     );
 
     return data;

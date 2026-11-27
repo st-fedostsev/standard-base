@@ -6,13 +6,13 @@
 
 ## Стек
 
-| Часть         | Технологии                                                      | Где лежит                     |
-| ------------- | --------------------------------------------------------------- | ----------------------------- |
-| Frontend      | React, TypeScript, MUI (Material UI), Vite                      | `frontend/`                   |
-| Backend       | Python, FastAPI, SQLModel                                       | `backend/`                    |
-| База данных   | PostgreSQL, драйвер `psycopg`                                   | адрес задаётся `DATABASE_URL` |
-| Качество кода | ESLint, Prettier, TypeScript (frontend); Ruff, pytest (backend) | `frontend/`, `backend/`       |
-| Автоматизация | GitHub Actions, git-хуки, CODEOWNERS                            | `.github/`, `.githooks/`      |
+| Часть         | Технологии                                                       | Где лежит                             |
+| ------------- | ---------------------------------------------------------------- | ------------------------------------- |
+| Frontend      | React, TypeScript, MUI (Material UI), Vite                       | `frontend/`                           |
+| Backend       | Python, FastAPI, SQLModel                                        | `backend/`                            |
+| База данных   | PostgreSQL, драйвер `psycopg`                                    | адрес задаётся `db_connection_string` |
+| Качество кода | ESLint, Prettier, TypeScript (frontend); Ruff (backend, вручную) | `frontend/`, `backend/`               |
+| Автоматизация | GitHub Actions, git-хуки, CODEOWNERS                             | `.github/`, `.githooks/`              |
 
 ## Структура репозитория
 
@@ -20,9 +20,9 @@
 standart-base/
 ├── .github/
 │   ├── workflows/
-│   │   ├── ci.yml            проверки frontend
-│   │   └── backend.yml       проверки backend
-│   └── CODEOWNERS            владельцы папок
+│   │   ├── ci.yml              проверки frontend на PR
+│   │   └── deploy-backend.yml  деплой compose-стека на dev/rc
+│   └── CODEOWNERS              владельцы папок
 ├── .githooks/
 │   ├── pre-commit            проверка перед коммитом
 │   └── pre-push              проверка перед push
@@ -80,6 +80,27 @@ node scripts/structure.mjs create   # создаёт недостающие па
 
 Владельцы получают запрос на ревью автоматически, если в правилах веток включено «Require review from Code Owners».
 
+## Сценарии интерфейса
+
+- **Вход и регистрация:** email/пароль → 6-значный OTP-код с почты → access-токен в памяти браузера, refresh-токен в cookie. После подтверждения переход на `/base`.
+- **Список карточек:** `/base`, фильтры по названию, статусу, категории, автору и дате, бесконечная прокрутка. Клик по строке или карточке ничего не открывает.
+- **Согласование:** `/moderation` доступно администратору. Вкладки «Карточки» и «Пользователи» переключаются компонентом `PageHeaderTabs`; «Принять» и «Отклонить» пока работают на мок-данных и меняют только локальный список.
+- **Создание:** кнопка «Создать» открывает форму с секциями «Основное», «Показатели», «Мероприятия» и «Обложка». Заголовок и категория стоят рядом, длинные поля растут по высоте, у текста есть мягкие лимиты и счётчики. При пустых обязательных полях показывается Toast, а фокус переходит к первой ошибке.
+- **Предпросмотр:** кнопка «⋯» в строке → «Предпросмотр» → модальное окно с обложкой, показателями «Было → Стало», отраслью, потоком и мероприятиями.
+- **Экспорт:** из предпросмотра или кебаб-меню кнопка «Экспорт» скачивает PPTX через `POST /cards/export`.
+- **Импорт:** кнопка «Импортировать» → файл PPTX, категория и видимость → `POST /cards/import`.
+- **Доступ:** кнопки создания/импорта видны только ролям `author` и `admin`; гостю доступны публичные карточки.
+
+## Известные ограничения
+
+Список относится к текущему состоянию бэкенда; код бэкенда в этой итерации не менялся.
+
+- Новый пользователь при регистрации получает роль `guest`, а эндпоинта выдачи роли `author` пока нет — поэтому создать карточку может только администратор.
+- `POST /cards/create` ожидает ровно три результата; форма создания отправляет только заполненные метрики.
+- Нет ручки `logout`: кнопка «Выйти» очищает только состояние фронтенда и кэш, refresh-cookie остаётся на устройстве.
+- В `DEV` вместо отправки почты код OTP выводится в консоль бэкенда (`MockNotifier`).
+- Настройка SMTP в `.env.example` рассчитана на неявный TLS (порт 465), а нотификатор использует STARTTLS.
+
 ## Проверки
 
 ### Git-хуки
@@ -95,12 +116,12 @@ node scripts/structure.mjs create   # создаёт недостающие па
 
 ### CI
 
-| Файл                          | Запускается на PR в | Шаги                                                                   |
-| ----------------------------- | ------------------- | ---------------------------------------------------------------------- |
-| `ci.yml` (job `frontend`)     | `frontend`, `dev`   | структура → `npm ci` → `format:check` → `lint` → `typecheck` → `build` |
-| `backend.yml` (job `backend`) | `backend`, `dev`    | `pip install` → `ruff check` → `ruff format --check` → `pytest`        |
+| Файл                      | Когда запускается      | Шаги                                                                   |
+| ------------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| `ci.yml` (job `frontend`) | PR в `frontend`, `dev` | структура → `npm ci` → `format:check` → `lint` → `typecheck` → `build` |
+| `deploy-backend.yml`      | push в `dev` или `rc`  | rsync на сервер → `docker compose build` → `docker compose up -d`      |
 
-Шаги идут по порядку: если один падает, следующие не выполняются. Результат виден в PR как check. Чтобы CI блокировал слияние, отметьте checks `frontend` и `backend` как обязательные в Settings → Branches.
+Отдельной проверки backend в CI сейчас нет: `deploy-backend.yml` деплоит стек, но не запускает `ruff` и `pytest`. Шаги frontend идут по порядку: если один падает, следующие не выполняются. Результат виден в PR как check. Чтобы CI блокировал слияние, отметьте check `frontend` как обязательный в Settings → Branches.
 
 ## Запуск
 
@@ -124,14 +145,14 @@ npm run dev
 | `npm run typecheck`    | проверка типов TypeScript  |
 | `npm run structure`    | проверка структуры папок   |
 
-Переменные в `frontend/.env` (файл не коммитится):
+Переменные в `frontend/.env` (файл не коммитится, пример — `frontend/.env.example`):
 
 ```
 HOST=localhost
-API_PROXY_TARGET=http://localhost:<порт backend>
+API_PROXY_TARGET=localhost
 ```
 
-`API_PROXY_TARGET` задаёт адрес backend для запросов на `/api`. Если значение пустое, прокси не включается.
+`API_PROXY_TARGET` — только хост backend без схемы и порта: Vite сам строит `http://<хост>:8000` и проксирует туда запросы на `/api`, срезая префикс. Backend должен быть поднят на порту 8000.
 
 ### Backend
 
@@ -139,24 +160,24 @@ API_PROXY_TARGET=http://localhost:<порт backend>
 cd backend
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-uvicorn app.main:app --reload
+pip install -r requirements.txt
+cd src && uvicorn main:app --reload
 ```
 
 Документация API (Swagger): http://localhost:8000/docs.
 
 | Команда                 | Что делает                                           |
 | ----------------------- | ---------------------------------------------------- |
-| `ruff check .`          | линтер                                               |
+| `ruff check .`          | линтер (вручную, в CI не входит)                     |
 | `ruff format --check .` | проверка форматирования (`ruff format .` исправляет) |
-| `pytest`                | тесты                                                |
+| `pytest`                | тесты (пока их нет, команда завершится кодом 5)      |
 
-Переменные окружения лежат в `backend/.env` (файл не коммитится). Адрес БД задаётся `DATABASE_URL`.
+Переменные окружения лежат в `backend/.env` (файл не коммитится, пример — `backend/.env.example`). Адрес БД задаётся `db_connection_string`. Для `environment` допустимы значения `DEV` и `RELEASE`: в `DEV` OTP печатается в консоль через `MockNotifier`.
 
 ## Тесты
 
-- **Backend:** тестов пока нет. `pytest` без тестов завершается с кодом 5, и шаг в CI падает. Первый тест нужен до первого PR в `backend`.
-- **Frontend:** unit-тесты логики в `src/utils` на Vitest и Testing Library. Команда `npm run test` появится после их настройки. E2E на Playwright добавим, когда будет стенд `dev`.
+- **Backend:** тестов пока нет. `pytest` без тестов завершается с кодом 5, поэтому шаг с тестами нельзя добавить в CI до появления первого теста.
+- **Frontend:** unit-тесты логики в `src/utils` на Vitest и Testing Library пока не настроены. Команда `npm run test` появится после их добавления. E2E на Playwright — когда будет стабильный стенд `dev`.
 
 ## Документация
 
@@ -178,5 +199,5 @@ uvicorn app.main:app --reload
 - Проверки CI не запускаются на PR в `rc`.
 - Тесты frontend не входят в CI, пока не добавлен шаг `npm run test`.
 - Хуки проверяют только frontend.
-- Деплой не автоматизирован.
+- Деплой запускается только по push в `dev`/`rc`; проверок бэкенда перед деплоем нет.
 - Новый push не отменяет предыдущий запуск CI.

@@ -1,4 +1,5 @@
 import {
+  Navigate,
   Outlet,
   Route,
   createBrowserRouter,
@@ -15,18 +16,15 @@ import { ContentLayout } from './ContentLayout';
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<Outlet />} errorElement={<GlobalRouterErrorPage />}>
+      <Route element={<Navigate to='/base' replace />} />
+
+      {/* Публичные маршруты */}
       <Route path='/login' element={<LoginPage />} />
       <Route path='/register' element={<RegisterPage />} />
+
+      {/* Маршруты приложения */}
       <Route element={<ContentLayout />}>
-        <Route element={<CardsPage />} path='/base' />
-        {/* <Route
-        path="/admin"
-        element={
-          <PermissionGuard minRole="admin" fallback={<Navigate to="/" replace />}>
-            <AdminPage />
-          </PermissionGuard>
-        }
-      /> */}
+        <Route path='base' element={<CardsPage />} />
       </Route>
     </Route>
   )

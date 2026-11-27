@@ -91,7 +91,7 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
     try {
       await logout();
       setIsOpen(false);
-      navigate('/', { replace: true });
+      navigate('/base', { replace: true });
     } catch {
       setLogoutError(true);
     } finally {
@@ -196,17 +196,6 @@ export function UserMenu({ rail, expanded, popupWidth }: UserMenuProps) {
       >
         {user ? (
           [
-            <MenuItem
-              key='profile'
-              sx={menuItemSx}
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/profile');
-              }}
-            >
-              Личный кабинет
-            </MenuItem>,
-
             <Divider key='divider' sx={menuDividerSx} />,
 
             <MenuItem

@@ -6,30 +6,68 @@ type ValidationContainerProps = {
   children: ReactNode;
   errorText?: string;
   errorId: string;
+  helperText?: string;
+  helperId?: string;
+  counter?: string;
+  counterColor?: string;
 };
 
 export function ValidationContainer({
   children,
   errorText,
   errorId,
+  helperText,
+  helperId,
+  counter,
+  counterColor = 'text.secondary',
 }: ValidationContainerProps) {
+  const footerText = errorText ?? helperText;
+
   return (
     <Box>
       {children}
 
-      {errorText && (
-        <Typography
-          id={errorId}
-          variant='caption'
-          role='alert'
+      {(footerText || counter) && (
+        <Box
           sx={{
-            display: 'block',
-            color: 'error.main',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 1,
             mt: 0.5,
           }}
         >
-          {errorText}
-        </Typography>
+          {footerText ? (
+            <Typography
+              id={errorText ? errorId : helperId}
+              variant='caption'
+              role={errorText ? 'alert' : undefined}
+              sx={{
+                minWidth: 0,
+                color: errorText ? 'error.main' : 'text.secondary',
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {footerText}
+            </Typography>
+          ) : (
+            <Box />
+          )}
+
+          {counter && (
+            <Typography
+              variant='caption'
+              sx={{
+                flexShrink: 0,
+                ml: 'auto',
+                color: counterColor,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {counter}
+            </Typography>
+          )}
+        </Box>
       )}
     </Box>
   );

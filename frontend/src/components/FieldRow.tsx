@@ -15,6 +15,7 @@ export function FieldRow({ columns = '1fr 1fr', children }: FieldRowProps) {
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', sm: columns },
+        alignItems: 'start',
         gap: 2,
       }}
     >

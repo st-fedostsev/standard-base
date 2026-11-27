@@ -10,6 +10,21 @@ import type {
 } from '@/utils/types/auth';
 import type { CurrentUser } from '@/utils/types/user';
 
+type CurrentUserResponse = CurrentUser & {
+  avatar?: string | null;
+  email?: string;
+};
+
+/** Бэк отдаёт base64 в поле avatar, интерфейс ждёт готовый URL аватара. */
+function normalizeCurrentUser(data: CurrentUserResponse): CurrentUser {
+  const { avatar, ...rest } = data;
+
+  return {
+    ...rest,
+    avatarUrl: avatar ? `data:image/jpeg;base64,${avatar}` : null,
+  };
+}
+
 export class AuthApi {
   private readonly http: AxiosInstance;
 
@@ -49,9 +64,11 @@ export class AuthApi {
 
   /** Получает пользователя по access-токену. */
   getCurrentUser = async (signal?: AbortSignal): Promise<CurrentUser> => {
-    const { data } = await this.http.get<CurrentUser>('/users/me', { signal });
+    const { data } = await this.http.get<CurrentUserResponse>('/users/me', {
+      signal,
+    });
 
-    return data;
+    return normalizeCurrentUser(data);
   };
 
   /** Получает новый access-токен через refresh-cookie. */

@@ -1,6 +1,7 @@
 # Документация
 
-- [Структура репозитория](structure.md): создаётся и проверяется `scripts/structure.mjs`
-- [Frontend](frontend/README.md): запуск и проверки
-- [Backend](backend/README.md): запуск и проверки
+Общая точка входа по проекту — [корневой README](../README.md): стек, ветки, сценарии интерфейса, проверки, запуск и известные ограничения.
 
+- [Структура репозитория](structure.md): создаётся и проверяется `scripts/structure.mjs`
+- [Frontend](frontend/README.md): запуск, API-клиент и сценарии интерфейса
+- [Backend](backend/README.md): запуск, проверки и известные ограничения бэкенда

@@ -10,7 +10,7 @@ export function filterCards(
   const { from, to } = filters.created;
 
   return cards.filter((card) => {
-    const createdDay = card.created_at.slice(0, 10);
+    const createdDay = card.createdAt.slice(0, 10);
 
     return (
       (query === '' || card.title.toLocaleLowerCase('ru').includes(query)) &&

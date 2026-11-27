@@ -1,15 +1,18 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { AppForm } from '@/components/AppForm';
 import { FieldRow } from '@/components/FieldRow';
 import { FileUpload } from '@/components/FileUpload';
 import { Input } from '@/components/Input';
+import { FormSection } from '@/components/Modals/FormSection';
 import { ModalLayout } from '@/components/Modals/ModalLayout';
 import { SwitchField } from '@/components/Modals/SwitchField';
 import { Toggle, type ToggleOption } from '@/components/Modals/Toggle';
+import { useToast, type ToastOptions } from '@/components/Toast';
+import { TruncatedText } from '@/components/TruncatedText';
 import type {
   CardCategory,
-  CardResult,
+  CreateCardResult,
   CardVisibility,
   CreateCardRequest,
 } from '@/utils/types/cards';
@@ -75,6 +78,12 @@ const VISIBILITY_OPTIONS: ToggleOption<CardVisibility>[] = [
 
 const METRIC_PAIRS_COUNT = 3;
 const MAX_EVENTS = 10;
+
+/** Мягкие лимиты полей: защищают от случайно огромного текста. */
+const TITLE_MAX_LENGTH = 120;
+const SHORT_TEXT_MAX_LENGTH = 60;
+const METRIC_TITLE_MAX_LENGTH = 80;
+const EVENT_MAX_LENGTH = 300;
 
 function createEmptyForm(): FormValues {
   return {
@@ -185,8 +194,49 @@ function validate(values: FormValues): FormErrors {
   return errors;
 }
 
+/** Короткое описание ошибок для Toast. */
+function getValidationMessage(errors: FormErrors): string {
+  const missing: string[] = [];
+
+  if (errors.title) missing.push('Заголовок');
+  if (errors.categoryId) missing.push('Категория');
+  if (errors.industry) missing.push('Отрасль');
+  if (errors.personalFlow) missing.push('Пилотный поток');
+
+  errors.events?.forEach((error, index) => {
+    if (error) missing.push(`Мероприятие ${index + 1}`);
+  });
+
+  const metricIssues =
+    errors.metrics
+      ?.map((metric, index) => {
+        const fields: string[] = [];
+
+        if (metric.title) fields.push('название');
+        if (metric.before) fields.push('«Было»');
+        if (metric.after) fields.push('«Стало»');
+
+        return fields.length > 0
+          ? `Показатель ${index + 1}: ${fields.join(', ')}`
+          : null;
+      })
+      .filter((issue): issue is string => issue !== null) ?? [];
+
+  const parts: string[] = [];
+
+  if (missing.length > 0) {
+    parts.push(`Заполните обязательные поля: ${missing.join(', ')}`);
+  }
+
+  if (metricIssues.length > 0) {
+    parts.push(metricIssues.join('. '));
+  }
+
+  return parts.length > 0 ? `${parts.join('. ')}.` : 'Заполните форму';
+}
+
 function toCreateCardRequest(values: FormValues): CreateCardRequest {
-  const results: CardResult[] = values.metrics
+  const results: CreateCardResult[] = values.metrics
     .filter(hasMetricContent)
     .map((metric) => {
       const before = parseMetricNumber(metric.before);
@@ -222,11 +272,47 @@ export function AddCardModal({
   categories,
   onSubmit,
 }: AddCardModalProps) {
+  const { showToast, dismissToast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
+  const lastToastId = useRef<string | null>(null);
   const [values, setValues] = useState<FormValues>(createEmptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showErrors, setShowErrors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+
+  const replaceToast = (options: ToastOptions) => {
+    if (lastToastId.current) {
+      dismissToast(lastToastId.current);
+    }
+
+    lastToastId.current = showToast(options);
+  };
+
+  // Ошибки уже в DOM: можно перевести фокус к первому невалидному полю.
+  useEffect(() => {
+    if (focusRequest === 0) {
+      return;
+    }
+
+    const form = formRef.current;
+
+    if (!form) {
+      return;
+    }
+
+    const target =
+      form.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+      form.querySelector<HTMLElement>('[role="combobox"]');
+
+    if (!target) {
+      return;
+    }
+
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [focusRequest]);
 
   const applyValues = (next: FormValues) => {
     setValues(next);
@@ -294,6 +380,17 @@ export function AddCardModal({
     });
   };
 
+  const clearMetric = (index: number) => {
+    applyValues({
+      ...values,
+      metrics: values.metrics.map((metric, currentIndex) =>
+        currentIndex === index
+          ? { title: '', enabled: false, before: '', after: '' }
+          : metric
+      ),
+    });
+  };
+
   const updateEvent = (index: number, value: string) => {
     const events = values.events.map((event, currentIndex) =>
       currentIndex === index ? value : event
@@ -328,6 +425,11 @@ export function AddCardModal({
       return;
     }
 
+    if (lastToastId.current) {
+      dismissToast(lastToastId.current);
+      lastToastId.current = null;
+    }
+
     resetForm();
     onClose();
   };
@@ -343,6 +445,12 @@ export function AddCardModal({
     setShowErrors(true);
 
     if (Object.keys(nextErrors).length > 0) {
+      replaceToast({
+        title: 'Проверьте форму',
+        message: getValidationMessage(nextErrors),
+        use: 'warning',
+      });
+      setFocusRequest((request) => request + 1);
       return;
     }
 
@@ -352,10 +460,18 @@ export function AddCardModal({
     try {
       await onSubmit(toCreateCardRequest(values), values.files[0] ?? null);
 
+      replaceToast({
+        message: 'Карточка отправлена на модерацию',
+        use: 'success',
+      });
+
       resetForm();
       onClose();
     } catch {
-      setSubmitError('Не удалось создать карточку. Попробуйте ещё раз.');
+      const message = 'Не удалось создать карточку. Попробуйте ещё раз.';
+
+      setSubmitError(message);
+      replaceToast({ message, use: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -411,150 +527,271 @@ export function AddCardModal({
         </>
       }
     >
-      <AppForm onSubmit={handleSubmit}>
-        <Input
-          label='Заголовок'
-          value={values.title}
-          onChange={(title) => updateField('title', title)}
-          errorText={errors.title}
-          required
-          autoFocus
-          disabled={isSubmitting}
-        />
-
-        <FieldRow>
-          <Input
-            label='Пилотный поток'
-            value={values.personalFlow}
-            onChange={(personalFlow) =>
-              updateField('personalFlow', personalFlow)
-            }
-            errorText={errors.personalFlow}
-            required
-            disabled={isSubmitting}
-          />
-
-          <Input
-            label='Отрасль'
-            value={values.industry}
-            onChange={(industry) => updateField('industry', industry)}
-            errorText={errors.industry}
-            required
-            disabled={isSubmitting}
-          />
-        </FieldRow>
-
-        <FormControl
-          fullWidth
-          size='small'
-          error={Boolean(errors.categoryId)}
-          disabled={isSubmitting}
-        >
-          <InputLabel id='add-card-category-label'>Категория</InputLabel>
-
-          <Select<string>
-            labelId='add-card-category-label'
-            label='Категория'
-            value={values.categoryId}
-            onChange={(event) => updateField('categoryId', event.target.value)}
-          >
-            {categories.map((category) => (
-              <MenuItem key={category.id} value={category.id}>
-                {category.name}
-              </MenuItem>
-            ))}
-          </Select>
-
-          {errors.categoryId && (
-            <FormHelperText>{errors.categoryId}</FormHelperText>
-          )}
-        </FormControl>
-
-        <Stack spacing={2.5}>
-          {values.metrics.map((metric, index) => (
-            <Stack key={index} spacing={1}>
-              <Box sx={{ width: '50%' }}>
-                <Input
-                  label='Название показателя'
-                  ariaLabel={`Название показателя ${index + 1}`}
-                  value={metric.title}
-                  onChange={(title) => updateMetricTitle(index, title)}
-                  errorText={errors.metrics?.[index]?.title}
-                  disabled={isSubmitting}
-                />
-              </Box>
-
-              <Collapse in={metric.title.trim() !== ''} timeout='auto'>
-                <Stack spacing={1}>
-                  <FieldRow>
-                    <Input
-                      label='Было'
-                      value={metric.before}
-                      onChange={(before) =>
-                        updateMetricValue(index, 'before', before)
-                      }
-                      errorText={errors.metrics?.[index]?.before}
-                      disabled={isSubmitting}
-                    />
-
-                    <Input
-                      label='Стало'
-                      value={metric.after}
-                      onChange={(after) =>
-                        updateMetricValue(index, 'after', after)
-                      }
-                      errorText={errors.metrics?.[index]?.after}
-                      disabled={isSubmitting}
-                    />
-                  </FieldRow>
-
-                  {parseMetricNumber(metric.before) !== null &&
-                    parseMetricNumber(metric.after) !== null && (
-                      <SwitchField
-                        label='Положительный результат'
-                        checked={metric.enabled}
-                        onChange={(enabled) =>
-                          updateMetricSwitch(index, enabled)
-                        }
-                        disabled={isSubmitting}
-                      />
-                    )}
-                </Stack>
-              </Collapse>
-            </Stack>
-          ))}
-        </Stack>
-
-        <Stack spacing={1}>
-          {values.events.map((event, index) => (
+      <AppForm onSubmit={handleSubmit} formRef={formRef}>
+        <FormSection title='Основное'>
+          <FieldRow columns='minmax(0, 2fr) minmax(0, 1fr)'>
             <Input
-              key={index}
-              label='Мероприятие'
-              ariaLabel={`Мероприятие ${index + 1}`}
-              value={event}
-              onChange={(value) => updateEvent(index, value)}
-              errorText={errors.events?.[index]}
+              label='Заголовок'
+              name='title'
+              value={values.title}
+              onChange={(title) => updateField('title', title)}
+              errorText={errors.title}
+              helperText='Название карточки в таблице.'
+              required
+              autoFocus
               multiline
-              minRows={2}
+              minRows={1}
               maxRows={3}
-              required={index === 0}
+              maxLength={TITLE_MAX_LENGTH}
+              placeholder='Например: Программа наставничества'
               disabled={isSubmitting}
             />
-          ))}
 
-          <Typography variant='caption' color='text.secondary'>
-            {filledEventsCount}/{MAX_EVENTS}
-          </Typography>
-        </Stack>
+            <FormControl
+              fullWidth
+              size='small'
+              error={Boolean(errors.categoryId)}
+              disabled={isSubmitting}
+              required
+            >
+              <InputLabel id='add-card-category-label'>Категория</InputLabel>
 
-        <FileUpload
-          value={values.files}
-          onChange={(files) => updateField('files', files)}
-          allowedTypes={ALL_FILE_TYPES}
-          maxSizeMb={3}
-          maxFiles={1}
-          disabled={isSubmitting}
-        />
+              <Select<string>
+                labelId='add-card-category-label'
+                label='Категория'
+                name='categoryId'
+                value={values.categoryId}
+                onChange={(event) =>
+                  updateField('categoryId', event.target.value)
+                }
+                renderValue={(selected) => {
+                  const category = categories.find(
+                    (item) => item.id === selected
+                  );
+
+                  return category ? (
+                    <TruncatedText value={category.name} />
+                  ) : (
+                    ''
+                  );
+                }}
+              >
+                {categories.map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+
+              {errors.categoryId && (
+                <FormHelperText>{errors.categoryId}</FormHelperText>
+              )}
+            </FormControl>
+          </FieldRow>
+
+          <FieldRow>
+            <Input
+              label='Отрасль'
+              name='industry'
+              value={values.industry}
+              onChange={(industry) => updateField('industry', industry)}
+              errorText={errors.industry}
+              required
+              multiline
+              minRows={1}
+              maxRows={2}
+              maxLength={SHORT_TEXT_MAX_LENGTH}
+              placeholder='Например: Финансы'
+              disabled={isSubmitting}
+            />
+
+            <Input
+              label='Пилотный поток'
+              name='personalFlow'
+              value={values.personalFlow}
+              onChange={(personalFlow) =>
+                updateField('personalFlow', personalFlow)
+              }
+              errorText={errors.personalFlow}
+              helperText='Показатель личного потока.'
+              required
+              multiline
+              minRows={1}
+              maxRows={2}
+              maxLength={SHORT_TEXT_MAX_LENGTH}
+              placeholder='Например: 10 000'
+              disabled={isSubmitting}
+            />
+          </FieldRow>
+        </FormSection>
+
+        <FormSection
+          title='Показатели'
+          description='Необязательно. Заполните, если есть динамика «Было → Стало».'
+        >
+          <Stack spacing={1.5}>
+            {values.metrics.map((metric, index) => (
+              <Box
+                key={index}
+                sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1.5,
+                }}
+              >
+                <Stack spacing={1.5}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography
+                      variant='caption'
+                      color='text.secondary'
+                      sx={{ fontWeight: 600 }}
+                    >
+                      Показатель {index + 1}
+                    </Typography>
+
+                    {hasMetricContent(metric) && (
+                      <Button
+                        size='small'
+                        variant='text'
+                        onClick={() => clearMetric(index)}
+                        disabled={isSubmitting}
+                      >
+                        Очистить
+                      </Button>
+                    )}
+                  </Box>
+
+                  <Input
+                    label='Название показателя'
+                    ariaLabel={`Название показателя ${index + 1}`}
+                    name={`metric-${index}-title`}
+                    value={metric.title}
+                    onChange={(title) => updateMetricTitle(index, title)}
+                    errorText={errors.metrics?.[index]?.title}
+                    multiline
+                    minRows={1}
+                    maxRows={2}
+                    maxLength={METRIC_TITLE_MAX_LENGTH}
+                    placeholder='Например: Конверсия'
+                    disabled={isSubmitting}
+                  />
+
+                  <Collapse in={metric.title.trim() !== ''} timeout='auto'>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                          xs: '1fr',
+                          sm: '1fr 1fr',
+                          md: 'minmax(0, 1fr) minmax(0, 1fr) auto',
+                        },
+                        alignItems: 'start',
+                        gap: 1.5,
+                      }}
+                    >
+                      <Input
+                        label='Было'
+                        name={`metric-${index}-before`}
+                        value={metric.before}
+                        onChange={(before) =>
+                          updateMetricValue(index, 'before', before)
+                        }
+                        errorText={errors.metrics?.[index]?.before}
+                        placeholder='0'
+                        disabled={isSubmitting}
+                      />
+
+                      <Input
+                        label='Стало'
+                        name={`metric-${index}-after`}
+                        value={metric.after}
+                        onChange={(after) =>
+                          updateMetricValue(index, 'after', after)
+                        }
+                        errorText={errors.metrics?.[index]?.after}
+                        placeholder='0'
+                        disabled={isSubmitting}
+                      />
+
+                      {parseMetricNumber(metric.before) !== null &&
+                        parseMetricNumber(metric.after) !== null && (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              minHeight: 40,
+                            }}
+                          >
+                            <SwitchField
+                              label='Положительный результат'
+                              checked={metric.enabled}
+                              onChange={(enabled) =>
+                                updateMetricSwitch(index, enabled)
+                              }
+                              disabled={isSubmitting}
+                            />
+                          </Box>
+                        )}
+                    </Box>
+                  </Collapse>
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        </FormSection>
+
+        <FormSection
+          title='Мероприятия'
+          description='Опишите, что сделали или планируете. Новое поле появится автоматически.'
+        >
+          <Stack spacing={1.5}>
+            {values.events.map((event, index) => (
+              <Input
+                key={index}
+                label={`Мероприятие ${index + 1}`}
+                ariaLabel={`Мероприятие ${index + 1}`}
+                name={`event-${index}`}
+                value={event}
+                onChange={(value) => updateEvent(index, value)}
+                errorText={errors.events?.[index]}
+                multiline
+                minRows={2}
+                maxRows={4}
+                maxLength={EVENT_MAX_LENGTH}
+                placeholder='Например: провели встречу с командой'
+                required={index === 0}
+                disabled={isSubmitting}
+              />
+            ))}
+
+            <Typography
+              variant='caption'
+              color='text.secondary'
+              sx={{ textAlign: 'right' }}
+            >
+              Заполнено {filledEventsCount} из {MAX_EVENTS}
+            </Typography>
+          </Stack>
+        </FormSection>
+
+        <FormSection title='Обложка'>
+          <FileUpload
+            value={values.files}
+            onChange={(files) => updateField('files', files)}
+            allowedTypes={ALL_FILE_TYPES}
+            maxSizeMb={3}
+            maxFiles={1}
+            disabled={isSubmitting}
+          />
+        </FormSection>
 
         {submitError && (
           <Typography role='alert' color='error'>

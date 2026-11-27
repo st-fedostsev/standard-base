@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 
 import { Sticky } from '@/components/Sticky';
 import type { NavItem } from '@/utils/types/navigation';
