@@ -20,6 +20,18 @@ function isCardStatus(value: string): value is CardStatus {
   return Object.prototype.hasOwnProperty.call(CARD_STATUS_LABELS, value);
 }
 
+/**
+ * Backend ждёт datetime с таймзоной, а фильтр хранит дату как YYYY-MM-DD. Для
+ * конечной даты берём конец дня, чтобы она входила в диапазон.
+ */
+function toIsoDateTime(date: string, endOfDay = false): string | null {
+  if (!date) {
+    return null;
+  }
+
+  return `${date}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`;
+}
+
 function createRequest(filters: CardFilters, offset: number): GetCardsRequest {
   const selectedStatus =
     filters.status.length === 1 && isCardStatus(filters.status[0])
@@ -27,8 +39,8 @@ function createRequest(filters: CardFilters, offset: number): GetCardsRequest {
       : null;
 
   return {
-    created_from: filters.created.from || null,
-    created_to: filters.created.to || null,
+    created_from: toIsoDateTime(filters.created.from),
+    created_to: toIsoDateTime(filters.created.to, true),
     title: filters.search.trim() || null,
     status: selectedStatus,
     category: filters.category.length === 1 ? filters.category[0] : null,
