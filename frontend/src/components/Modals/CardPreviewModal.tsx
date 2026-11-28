@@ -113,8 +113,6 @@ export function CardPreviewModal({
     }
   };
 
-  const primaryResult = card?.results[0];
-
   return (
     <ModalLayout
       open={open}
@@ -211,17 +209,6 @@ export function CardPreviewModal({
                 <ResultRow key={`${result.title}-${index}`} result={result} />
               ))}
             </Box>
-
-            <TextField
-              fullWidth
-              size='small'
-              multiline
-              minRows={2}
-              label='Основной результат'
-              value={primaryResult?.title ?? '—'}
-              slotProps={{ htmlInput: { readOnly: true } }}
-              sx={{ mt: 2 }}
-            />
           </Box>
 
           <Box sx={{ minWidth: 0 }}>
