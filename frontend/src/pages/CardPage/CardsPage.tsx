@@ -16,6 +16,7 @@ import { ImportCardModal } from '@/components/Modals/ImportCardModal';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { useToast } from '@/components/Toast/useToast';
 import { api } from '@/utils/api';
+import { useCurrentRole } from '@/utils/hooks/useCurrentRole';
 import {
   DEFAULT_CARD_FILTERS,
   type CardFilters,
@@ -23,7 +24,7 @@ import {
   type CreateCardRequest,
 } from '@/utils/types/cards';
 import { isFiltered } from '@/utils/types/filters';
-import { ROLES } from '@/utils/types/roles';
+import { ROLES, hasAccess } from '@/utils/types/roles';
 import AddIcon from '@mui/icons-material/Add';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
@@ -41,6 +42,8 @@ import { useCardsPageData } from './utils/useCardsPageData';
 export function CardsPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const role = useCurrentRole();
+  const canSelect = hasAccess(role, [ROLES.Author, ROLES.Admin]);
 
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_CARD_FILTERS);
   const [selection, setSelection] =
@@ -228,23 +231,28 @@ export function CardsPage() {
             totalMatchingCount={rows.length}
             selection={selection}
             onSelectionChange={setSelection}
-            massActionsPanel={({ count, selectAll, clear }) => (
-              <MassActionsPanel
-                count={count}
-                onClear={clear}
-                onSelectAll={selectAll}
-                actions={[
-                  {
-                    id: 'export-selected',
-                    label: 'Экспортировать выбранное',
-                    icon: FileDownloadOutlined,
-                    disabled: true,
-                    // Массовый экспорт появится вместе с отдельным эндпоинтом.
-                    onClick: () => undefined,
-                  },
-                ]}
-              />
-            )}
+            massActionsPanel={
+              canSelect
+                ? ({ count, selectAll, clear }) => (
+                    <MassActionsPanel
+                      count={count}
+                      onClear={clear}
+                      onSelectAll={selectAll}
+                      actions={[
+                        {
+                          id: 'export-selected',
+                          label: 'Экспортировать выбранное',
+                          icon: FileDownloadOutlined,
+                          disabled: true,
+                          roles: [ROLES.Author, ROLES.Admin],
+                          // Массовый экспорт появится вместе с отдельным эндпоинтом.
+                          onClick: () => undefined,
+                        },
+                      ]}
+                    />
+                  )
+                : undefined
+            }
             kebabMenu={(card) => [
               {
                 id: 'preview-card',
@@ -256,6 +264,7 @@ export function CardsPage() {
                 id: 'export-card',
                 label: 'Экспортировать карточку',
                 icon: FileDownloadOutlined,
+                roles: [ROLES.Author, ROLES.Admin],
                 onClick: () => {
                   void exportCard(card);
                 },

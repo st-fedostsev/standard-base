@@ -1,7 +1,9 @@
 import { useState } from 'react';
 
 import { ModalLayout } from '@/components/Modals/ModalLayout';
+import { PermissionGuard } from '@/components/PermissionGuard';
 import type { CardResult, CardRow } from '@/utils/types/cards';
+import { ROLES } from '@/utils/types/roles';
 import ArrowDownward from '@mui/icons-material/ArrowDownward';
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown';
 import ArrowUpward from '@mui/icons-material/ArrowUpward';
@@ -131,30 +133,34 @@ export function CardPreviewModal({
       actions={
         <>
           <Button onClick={onClose} disabled={isExporting}>
-            Отмена
+            Закрыть
           </Button>
 
-          <ButtonGroup variant='contained' disabled={isExporting}>
-            <Button onClick={() => void handleExport()}>
-              {isExporting ? 'Экспорт…' : 'Экспорт'}
-            </Button>
-            <Button
-              aria-label='Форматы экспорта'
-              onClick={(event) => setExportMenuAnchor(event.currentTarget)}
-            >
-              <ArrowDropDown />
-            </Button>
-          </ButtonGroup>
+          <PermissionGuard allowed={[ROLES.Author, ROLES.Admin]}>
+            <>
+              <ButtonGroup variant='contained' disabled={isExporting}>
+                <Button onClick={() => void handleExport()}>
+                  {isExporting ? 'Экспорт…' : 'Экспорт'}
+                </Button>
+                <Button
+                  aria-label='Форматы экспорта'
+                  onClick={(event) => setExportMenuAnchor(event.currentTarget)}
+                >
+                  <ArrowDropDown />
+                </Button>
+              </ButtonGroup>
 
-          <Menu
-            anchorEl={exportMenuAnchor}
-            open={exportMenuAnchor !== null}
-            onClose={() => setExportMenuAnchor(null)}
-          >
-            <MenuItem onClick={() => void handleExport()}>
-              Слайд PowerPoint (.pptx)
-            </MenuItem>
-          </Menu>
+              <Menu
+                anchorEl={exportMenuAnchor}
+                open={exportMenuAnchor !== null}
+                onClose={() => setExportMenuAnchor(null)}
+              >
+                <MenuItem onClick={() => void handleExport()}>
+                  Слайд PowerPoint (.pptx)
+                </MenuItem>
+              </Menu>
+            </>
+          </PermissionGuard>
         </>
       }
     >
